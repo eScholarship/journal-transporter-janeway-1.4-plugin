@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Find and navigate to this script's current directory, so it can be invoked from anywhere
+self_path=$(realpath $0)
+dir_path=$(dirname $self_path)
+cd "$dir_path"
+
+# cd up until we find (what is hopefully) the Django src folder
+while [[ $PWD != '/' && ${PWD##*/} != 'src' ]]; do cd ..; done
+
+python manage.py cdl-jt "$@"

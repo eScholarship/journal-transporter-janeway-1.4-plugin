@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# This script simply adds a symlink to /usr/local/bin so that the CLI interface can be
+# invoked from anywhere. This is required for interfacing with the intermediary app.
+
+self_path=$(realpath $0)
+dir_path=$(dirname $self_path)
+
+rm -f /usr/local/bin/cdl-jt-plugin # Remove existing link if it exists
+ln -s $dir_path/cli /usr/local/bin/cdl-jt-plugin
