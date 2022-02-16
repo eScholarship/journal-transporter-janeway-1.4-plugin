@@ -1,12 +1,12 @@
 [
   {
     "group": {
-      "name": "plugin:cdl_journal_transfer_janeway"
+      "name": "plugin:cdl_janeway_plugin"
     },
     "setting": {
       "description": "Plugin to interface with the CDL Journal Transfer app",
       "is_translatable": false,
-      "name": "cdl_journal_transfer_janeway_enabled",
+      "name": "cdl_janeway_plugin_enabled",
       "pretty_name": "Enable CDL Journal Transfer Janeway Plugin",
       "type": "boolean"
     },

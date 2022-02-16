@@ -11,7 +11,7 @@ Clone this repository into `${JANEWAY_ROOT}/plugins` on your Janeway server.
 This plugin adds interfaces for JSON data to be ingested into Janeway models. They can be invoked directly from the Django shell `python manage.py shell`, i.e.
 
 ```python
-from cdl_journal_transfer_janeway.interfaces.journal_handler import JournalHandler
+from cdl_janeway_plugin.interfaces.journal_handler import JournalHandler
 
 data = {...}
 
