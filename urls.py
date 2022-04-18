@@ -78,20 +78,22 @@ class TransporterRouter(NestedRouterMixin, DefaultRouter):
     """
     A router for the Transporter API.
 
-    In addtion to the rest framework DefaultRouter, this router
+    In addition to the rest framework DefaultRouter, this router
     supports nested resources and lookups by journal code.
     """
 
 
 router = TransporterRouter()
 journal_routes = router.register(r'journals', views.JournalViewSet)
-journal_routes.register(r'issues', views.IssueViewSet, 'journal-issues', parents_query_lookups=['journal__code'])
-journal_routes.register(r'sections', views.SectionViewSet, 'journal-sections', parents_query_lookups=['journal__code'])
-journal_routes.register(r'articles', views.ArticleViewSet, 'journal-articles', parents_query_lookups=['journal__code'])
+issue_routes = journal_routes.register(r'issues', views.IssueViewSet, 'journal-issues', parents_query_lookups=['journal__code'])
+section_routes = journal_routes.register(r'sections', views.SectionViewSet, 'journal-sections', parents_query_lookups=['journal__code'])
+article_routes = journal_routes.register(r'articles', views.ArticleViewSet, 'journal-articles', parents_query_lookups=['journal__code'])
+article_file_routes = article_routes.register(r'files', views.ArticleFileViewSet, 'journal-article-files', parents_query_lookups=['journal__code', 'article_id'])
 
 user_routes = router.register(r'users', views.UserViewSet)
 
 # Apply routers to URL patterns
 urlpatterns = [
-    url(r'^', include(router.urls))
+    url(r'^', include(router.urls)),
+    url(r'^manager', views.manager, name="transporter_manager")
 ]
