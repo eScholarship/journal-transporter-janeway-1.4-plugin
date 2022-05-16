@@ -59,7 +59,6 @@ class TransporterViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
 
 class JournalViewSet(TransporterViewSet):
     queryset = Journal.objects.all()
-    lookup_field = "code"
     serializer_class = serializers.JournalSerializer
 
 
