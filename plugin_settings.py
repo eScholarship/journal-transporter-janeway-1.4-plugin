@@ -1,11 +1,11 @@
 from utils import plugins
 from utils.install import update_settings
 
-PLUGIN_NAME = "Journal Transporter for Janeway 1.4"
-DESCRIPTION = "A plugin to handle importing JSON journal data"
+PLUGIN_NAME = "Journal Transporter Plugin for Janeway 1.4"
+DESCRIPTION = "A plugin to handle importing JSON journal data from the Journal Transporter application"
 AUTHOR = "Tim Frazee"
 VERSION = "0.1"
-SHORT_NAME = "cdl_janeway_plugin"
+SHORT_NAME = "journal_transporter"
 MANAGER_URL = "transporter_manager"
 
 class CDLJournalTransferJaneway(plugins.Plugin):
