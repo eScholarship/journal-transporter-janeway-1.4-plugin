@@ -2,7 +2,7 @@ import json
 
 from rest_framework import viewsets, generics, parsers
 from journal.models import Journal, Issue
-from submission.models import Section, Article
+from submission.models import Section, Article, FrozenAuthor
 from core.models import Account, File
 from core import files
 from plugins.cdl_janeway_plugin import serializers
@@ -98,3 +98,8 @@ class ArticleFileViewSet(TransporterViewSet):
         article = Article.objects.get(pk=kwargs["parent_lookup_article_id"])
         file = File.objects.get(pk=kwargs["pk"])
         return files.serve_file(request, file, article)
+
+
+class AuthorViewSet(TransporterViewSet):
+    queryset = FrozenAuthor.objects.all()
+    serializer_class = serializers.AuthorSerializer

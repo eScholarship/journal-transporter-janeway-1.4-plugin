@@ -4,7 +4,7 @@ from types import LambdaType
 from django.db.models import Model, FieldDoesNotExist
 from django.utils import timezone
 
-from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField, IntegerField, DateTimeField, EmailField, FileField, SlugRelatedField
+from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField, IntegerField, DateTimeField, EmailField, FileField, SlugRelatedField, PrimaryKeyRelatedField, BooleanField
 
 from journal.models import Journal, Issue, IssueType
 from submission.models import Section, Article, FrozenAuthor
@@ -48,6 +48,9 @@ class TransporterSerializer(ModelSerializer):
         Create and return a new model instance, given the validated data.
 
         Any model-specific logic should be encapsulated in #pre_process and #post_process.
+
+        If this method is overridden, pre_process and post_process won't work unless invoked
+        in the override.
         """
         data = validated_data
         self.apply_parent_id(data)
@@ -210,8 +213,6 @@ class UserSerializer(TransporterSerializer):
 
         # Ensure affiliation (institution) is not null
         if not data.get("affiliation") : data["affiliation"] = "None"
-        if not data.get("affiliation"):
-            import pdb; pdb.set_trace()
 
         # Ensure salutation fits SALUTATION_CHOICES list
         if data.get("salutation"):
@@ -263,13 +264,12 @@ class AuthorSerializer(UserSerializer):
     biography = CharField(**opt_str_field)
     signature = CharField(**opt_str_field)
 
-    def before_validation(self, data: dict) -> None:
-        self.article = Article.objects.get(pk=data.pop("article_id")) if "article_id" in data else None
-        super().before_validation(data)
-
-
     def create(self, validated_data: dict) -> FrozenAuthor:
-        return FrozenAuthor.objects.create(article=self.article, **validated_data)
+        viewset = self.context['view']
+        kwargs = viewset.get_parents_query_dict()
+
+        article = Article.objects.get(pk=kwargs["article_id"])
+        return FrozenAuthor.objects.create(article=article, **validated_data)
 
 
 class JournalSerializer(TransporterSerializer):
@@ -382,9 +382,9 @@ class ArticleSerializer(TransporterSerializer):
             "date_published": "date_published",
             "date_updated": "date_updated",
             "stage": "stage",
-            "section": "section",
-            "section_id": "section_id",
-            "authors": "authors"
+            "section_id": "section_id"
+            # "sections": "sections",
+            # "issues": "issues"
         }
         fields = tuple(field_map.keys())
         stage_map = {
@@ -412,38 +412,35 @@ class ArticleSerializer(TransporterSerializer):
     date_published = DateTimeField(required=False, allow_null=True)
     date_updated = DateTimeField(required=False, allow_null=True)
     stage = CharField(default="published", **opt_str_field)
-
-    section = CharField(source="section.name", read_only=True, **opt_str_field)
-    section_id = IntegerField(write_only=True, required=False)
-
-    authors = AuthorSerializer(many=True)
+    section_id = IntegerField(required=False, allow_null=True)
+    # issues = PrimaryKeyRelatedField(read_only=False, queryset=Issue.objects.all(), many=True, required=False, allow_null=True)
+    # sections = PrimaryKeyRelatedField(read_only=False, queryset=Section.objects.all(), required=False, allow_null=True)
 
     def before_validation(self, data: dict) -> None:
         # Title is required
         if not data.get("title") : data["title"] = "Untitled Article"
 
+        # data["issues"] = list(map(lambda j: j["target_record_key"].split(":")[-1], data["issues"]))
+        if data.get("sections") and data["sections"][0] and data["sections"][0]["target_record_key"]:
+            data["section_id"] = data["sections"][0]["target_record_key"].split(":")[-1]
+
 
     def pre_process(self, data: dict) -> None:
-        section, _created = Section.objects.get_or_create(journal=self.journal, name=data.get("section", "Articles"))
+        if not data.get("section_id"):
+            data["section_id"] = Section.objects.get_or_create(journal=self.journal, name="Articles")[0].pk
 
-        data["section_id"] = section.pk
         data["stage"] = self.Meta.stage_map[data["stage"]]
 
 
-    def create(self, data: dict) -> Article:
-        authors = data.pop("authors")
-        article = super().create(data)
-        for index, author_data in enumerate(authors):
-            if author_data.get("email"):
-                author = UserSerializer(**author_data).save()
-                if not author.password : author.set_password(utils.generate_password())
-                author.save()
-                submission_logic.add_user_as_author(author, article)
-            else:
-                author = AuthorSerializer(data={ "article_id": article.pk, "order": index, **author_data })
-                if author.is_valid() : author.save()
+    def post_process(self, model, data):
+        init_data = self.initial_data
+        if init_data.get("issues") and type(init_data["issues"]) is list:
+            issues = list(map(lambda j: j["target_record_key"].split(":")[-1], init_data["issues"]))
 
-        return article
+            for issue_pk in issues:
+                model.issues.add(Issue.objects.get(pk=issue_pk))
+
+            model.save()
 
 
 class FileSerializer(TransporterSerializer):
@@ -455,25 +452,41 @@ class FileSerializer(TransporterSerializer):
             "file": None,
             "description": "description",
             "label": "label",
-            "filename": "original_filename"
+            "original_filename": "original_filename",
+            "is_galley_file": "is_galley"
         }
         fields = tuple(field_map.keys())
 
-    file = FileField(write_only=True, use_url=False)
+    file = FileField(write_only=True, use_url=False, allow_empty_file=True)
     description = CharField(**opt_str_field)
     label = CharField(**opt_str_field)
-    filename = CharField(source="original_filename", max_length=1000, **opt_str_field)
+    original_filename = CharField(max_length=1000, **opt_str_field)
+    is_galley_file = BooleanField(source="is_galley", default=False)
 
 
     def create(self, validated_data: dict) -> Model:
         article = self.get_article()
 
         raw_file = validated_data.pop("file")
-        # TEST - this needs to become a real user reference
-        user = Account.objects.all()[0]
-        file = files.save_file_to_article(raw_file, article, user, validated_data.get("label"), description=validated_data.get("description"), is_galley=True)
 
-        galley = Galley.objects.create(article=article, file=file)
+        if self.initial_data.get("parent_target_record_key"):
+            replaced_file_pk = self.initial_data.get("parent_target_record_key").split(":")[-1]
+            replaced_file = File.objects.get(pk=replaced_file_pk)
+            if replaced_file:
+                file = files.overwrite_file(raw_file, replaced_file, (article, article.pk))
+        else:
+            # TEST - this needs to become a real user reference
+            user = Account.objects.all()[0]
+
+            file = files.save_file_to_article(raw_file,
+                                              article, user,
+                                              validated_data.get("label"),
+                                              description=validated_data.get("description"),
+                                              is_galley=(validated_data.get("is_galley") or False)
+                                              )
+
+        if validated_data.get("is_galley"):
+            Galley.objects.create(article=article, file=file)
 
         return file
 

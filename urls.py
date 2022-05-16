@@ -85,14 +85,11 @@ class TransporterRouter(NestedRouterMixin, DefaultRouter):
 
 router = TransporterRouter()
 journal_routes = router.register(r'journals', views.JournalViewSet)
-issue_routes = journal_routes.register(r'issues', views.IssueViewSet, 'journal-issues', parents_query_lookups=['journal__code'])
-section_routes = journal_routes.register(r'sections', views.SectionViewSet, 'journal-sections', parents_query_lookups=['journal__code'])
-article_routes = journal_routes.register(r'articles', views.ArticleViewSet, 'journal-articles', parents_query_lookups=['journal__code'])
-article_file_routes = article_routes.register(r'files', views.ArticleFileViewSet, 'journal-article-files', parents_query_lookups=['journal__code', 'article_id'])
 issue_routes = journal_routes.register(r'issues', views.IssueViewSet, 'journal-issues', parents_query_lookups=['journal_id'])
 section_routes = journal_routes.register(r'sections', views.SectionViewSet, 'journal-sections', parents_query_lookups=['journal_id'])
 article_routes = journal_routes.register(r'articles', views.ArticleViewSet, 'journal-articles', parents_query_lookups=['journal_id'])
 article_file_routes = article_routes.register(r'files', views.ArticleFileViewSet, 'journal-article-files', parents_query_lookups=['journal_id', 'article_id'])
+article_authors_routes = article_routes.register(r'authors', views.AuthorViewSet, 'journal-article-authors', parents_query_lookups=['journal_id', 'article_id'])
 
 user_routes = router.register(r'users', views.UserViewSet)
 
