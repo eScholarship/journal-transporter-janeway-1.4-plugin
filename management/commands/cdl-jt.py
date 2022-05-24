@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from cdl_janeway_plugin.interfaces.journal_handler import JournalHandler
+from journal_transporter_janeway_plugin.interfaces.journal_handler import JournalHandler
 
 import json
 

@@ -25,7 +25,7 @@ class CDLJournalTransferJaneway(plugins.Plugin):
 def install():
     CDLJournalTransferJaneway.install()
     update_settings(
-        file_path="plugins/cdl_janeway_plugin/install/settings.json"
+        file_path="plugins/journal_transporter/install/settings.json"
     )
 
 def hook_registry():

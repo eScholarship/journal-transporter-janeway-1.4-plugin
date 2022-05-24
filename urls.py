@@ -2,7 +2,7 @@ from django.conf.urls import url, include
 
 from rest_framework.routers import DefaultRouter, Route
 
-from plugins.cdl_janeway_plugin import views
+from plugins.journal_transporter import views
 
 # Adapted from chibisov's wonderful drf-extensions module
 # See https://github.com/chibisov/drf-extensions/blob/master/rest_framework_extensions/routers.py

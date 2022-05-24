@@ -1,11 +1,11 @@
 import json
+from plugins.journal_transporter import serializers
 
 from rest_framework import viewsets, generics, parsers
 from journal.models import Journal, Issue
 from submission.models import Section, Article, FrozenAuthor
 from core.models import Account, File
 from core import files
-from plugins.cdl_janeway_plugin import serializers
 from django.http import HttpResponse, FileResponse
 from django.utils.encoding import smart_str
 
