@@ -1,13 +1,19 @@
-import json
+# Suppress linter errors for missing Janeway imports
+#pylint: disable=E0611
+#pylint: disable=E0401
+
+from django.http import HttpResponse
+
+from rest_framework import viewsets, parsers
+
 from plugins.journal_transporter import serializers
 
-from rest_framework import viewsets, generics, parsers
 from journal.models import Journal, Issue
+from review.models import ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment, ReviewFormAnswer, EditorAssignment
 from submission.models import Section, Article, FrozenAuthor
-from core.models import Account, File
+from core.models import Account, AccountRole, File
 from core import files
-from django.http import HttpResponse, FileResponse
-from django.utils.encoding import smart_str
+
 
 # Adapted from chibisov's drf-extensions module
 # See https://github.com/chibisov/drf-extensions/blob/master/rest_framework_extensions/mixins.py
@@ -52,29 +58,9 @@ def manager(request):
 class TransporterViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     http_method_names = ['get', 'post']
 
-    def delete(self, request, *args, **kwargs):
+    def delete(self, _request, *_args, **_kwargs):
         """Deleting resources through this plugin is not allowed."""
         return HttpResponse(status=405)
-
-
-class JournalViewSet(TransporterViewSet):
-    queryset = Journal.objects.all()
-    serializer_class = serializers.JournalSerializer
-
-
-class IssueViewSet(TransporterViewSet):
-    queryset = Issue.objects.all()
-    serializer_class = serializers.IssueSerializer
-
-
-class SectionViewSet(TransporterViewSet):
-    queryset = Section.objects.all()
-    serializer_class = serializers.SectionSerializer
-
-
-class ArticleViewSet(TransporterViewSet):
-    queryset = Article.objects.all()
-    serializer_class = serializers.ArticleSerializer
 
 
 class UserViewSet(TransporterViewSet):
@@ -82,7 +68,52 @@ class UserViewSet(TransporterViewSet):
     serializer_class = serializers.UserSerializer
 
 
-class ArticleFileViewSet(TransporterViewSet):
+class JournalViewSet(TransporterViewSet):
+    queryset = Journal.objects.all()
+    serializer_class = serializers.JournalSerializer
+
+
+class JournalReviewFormViewSet(TransporterViewSet):
+    queryset = ReviewForm.objects.all()
+    serializer_class = serializers.JournalReviewFormSerializer
+
+
+class JournalReviewFormElementViewSet(TransporterViewSet):
+    queryset = ReviewFormElement.objects.all()
+    serializer_class = serializers.JournalReviewFormElementSerializer
+
+
+class JournalRoleViewSet(TransporterViewSet):
+    queryset = AccountRole.objects.all()
+    serializer_class = serializers.JournalRoleSerializer
+
+
+class JournalIssueViewSet(TransporterViewSet):
+    queryset = Issue.objects.all()
+    serializer_class = serializers.JournalIssueSerializer
+
+
+class JournalSectionViewSet(TransporterViewSet):
+    queryset = Section.objects.all()
+    serializer_class = serializers.JournalSectionSerializer
+
+
+class JournalArticleViewSet(TransporterViewSet):
+    queryset = Article.objects.all()
+    serializer_class = serializers.JournalArticleSerializer
+
+
+class JournalArticleEditorViewSet(TransporterViewSet):
+    queryset = EditorAssignment.objects.all()
+    serializer_class = serializers.JournalArticleEditorSerializer
+
+
+class JournalArticleAuthorViewSet(TransporterViewSet):
+    queryset = FrozenAuthor.objects.all()
+    serializer_class = serializers.JournalArticleAuthorSerializer
+
+
+class JournalArticleFileViewSet(TransporterViewSet):
     """
     Handles files for a journal/article set.
 
@@ -90,7 +121,7 @@ class ArticleFileViewSet(TransporterViewSet):
     the file itself.
     """
     queryset = File.objects.all()
-    serializer_class = serializers.FileSerializer
+    serializer_class = serializers.JournalArticleFileSerializer
     parent_keys = ["article_id"]
     parser_classes = [parsers.MultiPartParser]
 
@@ -100,6 +131,16 @@ class ArticleFileViewSet(TransporterViewSet):
         return files.serve_file(request, file, article)
 
 
-class AuthorViewSet(TransporterViewSet):
-    queryset = FrozenAuthor.objects.all()
-    serializer_class = serializers.AuthorSerializer
+class JournalArticleRoundViewSet(TransporterViewSet):
+    queryset = ReviewRound.objects.all()
+    serializer_class = serializers.JournalArticleRoundSerializer
+
+
+class JournalArticleRoundAssignmentViewSet(TransporterViewSet):
+    queryset = ReviewAssignment.objects.all()
+    serializer_class = serializers.JournalArticleRoundAssignmentSerializer
+
+
+class JournalArticleRoundAssignmentResponseViewSet(TransporterViewSet):
+    queryset = ReviewFormAnswer.objects.all()
+    serializer_class = serializers.JournalArticleRoundAssignmentResponseSerializer

@@ -84,12 +84,26 @@ class TransporterRouter(NestedRouterMixin, DefaultRouter):
 
 
 router = TransporterRouter()
+
 journal_routes = router.register(r'journals', views.JournalViewSet)
-issue_routes = journal_routes.register(r'issues', views.IssueViewSet, 'journal-issues', parents_query_lookups=['journal_id'])
-section_routes = journal_routes.register(r'sections', views.SectionViewSet, 'journal-sections', parents_query_lookups=['journal_id'])
-article_routes = journal_routes.register(r'articles', views.ArticleViewSet, 'journal-articles', parents_query_lookups=['journal_id'])
-article_file_routes = article_routes.register(r'files', views.ArticleFileViewSet, 'journal-article-files', parents_query_lookups=['journal_id', 'article_id'])
-article_authors_routes = article_routes.register(r'authors', views.AuthorViewSet, 'journal-article-authors', parents_query_lookups=['journal_id', 'article_id'])
+
+journal_review_form_routes = journal_routes.register(r'review_forms', views.JournalReviewFormViewSet, 'journal-review-forms', parents_query_lookups=['journal__id'])
+journal_review_form_element_routes = journal_review_form_routes.register(r'elements', views.JournalReviewFormElementViewSet, 'journal-review-form-elements', parents_query_lookups=['journal__id', 'review_form__id'])
+
+journal_role_routes = journal_routes.register(r'roles', views.JournalRoleViewSet, 'journal-roles', parents_query_lookups=['journal__id'])
+
+issue_routes = journal_routes.register(r'issues', views.JournalIssueViewSet, 'journal-issues', parents_query_lookups=['journal__id'])
+section_routes = journal_routes.register(r'sections', views.JournalSectionViewSet, 'journal-sections', parents_query_lookups=['journal__id'])
+
+# Holy nested routes, Batman
+article_routes = journal_routes.register(r'articles', views.JournalArticleViewSet, 'journal-articles', parents_query_lookups=['journal__id'])
+article_editor_routes = article_routes.register(r'editors', views.JournalArticleEditorViewSet, 'journal-article-editors', parents_query_lookups=['journal__id', 'article__id'])
+article_file_routes = article_routes.register(r'files', views.JournalArticleFileViewSet, 'journal-article-files', parents_query_lookups=['journal__id', 'article__id'])
+article_authors_routes = article_routes.register(r'authors', views.JournalArticleAuthorViewSet, 'journal-article-authors', parents_query_lookups=['journal__id', 'article__id'])
+article_rounds_routes = article_routes.register(r'rounds', views.JournalArticleRoundViewSet, 'journal-article-rounds', parents_query_lookups=['journal__id', 'article__id'])
+article_rounds_assignments_routes = article_rounds_routes.register(r'assignments', views.JournalArticleRoundAssignmentViewSet, 'journal-article-round-assignments', parents_query_lookups=['journal__id', 'article__id', 'review_round__id'])
+article_rounds_assignment_response_routes = article_rounds_assignments_routes.register(r'response', views.JournalArticleRoundAssignmentResponseViewSet, 'journal-article-round-assignment-response', parents_query_lookups=['journal__id', 'article__id', 'review_round__id', 'assignment__id'])
+
 
 user_routes = router.register(r'users', views.UserViewSet)
 
