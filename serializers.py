@@ -853,7 +853,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
 
 
     def get_primary_contact(self, record: FrozenAuthor):
-        return record.is_correspondence_author()
+        return record.is_correspondence_author
 
 
 class JournalArticleFileSerializer(TransporterSerializer):
