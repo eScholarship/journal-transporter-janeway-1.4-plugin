@@ -9,7 +9,7 @@ from rest_framework import viewsets, parsers
 from plugins.journal_transporter import serializers
 
 from journal.models import Journal, Issue
-from review.models import ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment, ReviewFormAnswer, EditorAssignment
+from review.models import ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment, ReviewFormAnswer, EditorAssignment, RevisionRequest
 from submission.models import Section, Article, FrozenAuthor
 from core.models import Account, AccountRole, File
 from core import files
@@ -129,6 +129,11 @@ class JournalArticleFileViewSet(TransporterViewSet):
         article = Article.objects.get(pk=kwargs["parent_lookup_article_id"])
         file = File.objects.get(pk=kwargs["pk"])
         return files.serve_file(request, file, article)
+
+
+class JournalArticleRevisionRequestViewSet(TransporterViewSet):
+    queryset = RevisionRequest.objects.all()
+    serializer_class = serializers.JournalArticleRevisionRequestSerializer
 
 
 class JournalArticleRoundViewSet(TransporterViewSet):

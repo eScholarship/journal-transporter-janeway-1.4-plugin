@@ -100,6 +100,7 @@ article_routes = journal_routes.register(r'articles', views.JournalArticleViewSe
 article_editor_routes = article_routes.register(r'editors', views.JournalArticleEditorViewSet, 'journal-article-editors', parents_query_lookups=['journal__id', 'article__id'])
 article_file_routes = article_routes.register(r'files', views.JournalArticleFileViewSet, 'journal-article-files', parents_query_lookups=['journal__id', 'article__id'])
 article_authors_routes = article_routes.register(r'authors', views.JournalArticleAuthorViewSet, 'journal-article-authors', parents_query_lookups=['journal__id', 'article__id'])
+article_revision_request_routes = article_routes.register(r'revision_requests', views.JournalArticleRevisionRequestViewSet, 'journal-article-revision-requests', parents_query_lookups=['journal__id', 'article__id'])
 article_rounds_routes = article_routes.register(r'rounds', views.JournalArticleRoundViewSet, 'journal-article-rounds', parents_query_lookups=['journal__id', 'article__id'])
 article_rounds_assignments_routes = article_rounds_routes.register(r'assignments', views.JournalArticleRoundAssignmentViewSet, 'journal-article-round-assignments', parents_query_lookups=['journal__id', 'article__id', 'review_round__id'])
 article_rounds_assignment_response_routes = article_rounds_assignments_routes.register(r'response', views.JournalArticleRoundAssignmentResponseViewSet, 'journal-article-round-assignment-response', parents_query_lookups=['journal__id', 'article__id', 'review_round__id', 'assignment__id'])

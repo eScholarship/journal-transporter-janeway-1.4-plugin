@@ -14,7 +14,7 @@ from rest_framework.serializers import ModelSerializer, SerializerMethodField, C
 from journal.models import Journal, Issue, IssueType
 from submission import models as submission_models
 from submission.models import Section, Article, FrozenAuthor
-from review.models import ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment, ReviewAssignmentAnswer, ReviewerRating, EditorAssignment
+from review.models import ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment, ReviewAssignmentAnswer, ReviewerRating, EditorAssignment, RevisionRequest
 from core.models import Account, AccountRole, Country, File, Galley, Role, Workflow, WorkflowElement, WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES
 from core import files, workflow
 
@@ -928,6 +928,48 @@ class JournalArticleFileSerializer(TransporterSerializer):
         kwargs = viewset.get_parents_query_dict()
 
         return Article.objects.get(pk=kwargs["article__id"])
+
+
+class JournalArticleRevisionRequestSerializer(TransporterSerializer):
+    """
+    Transporter serializer for article revision requests (/journals/{id}/articles/{id}/revision_requests/).
+
+    Maps to review.models.RevisionRequest.
+    """
+    class Meta:
+        model = RevisionRequest
+        field_map = {
+            "source_record_key": None,
+            "comment": "editor_note",
+            "author_comment": "author_note",
+            "decision": "type",
+            "date": "date_requested",
+            "date_due": "date_due",
+            "date_completed": "date_completed"
+        }
+        fields = tuple(field_map.keys())
+        foreign_keys = {
+            "article": "article_id",
+            "editor": "editor_id"
+        }
+        type_map = {
+            "revisions": "minor_revisions"
+        }
+
+
+    article_id = IntegerField()
+    editor_id = IntegerField()
+
+    comment = CharField(source="editor_note")
+    author_comment = CharField(source="author_note", **opt_str_field)
+    date = DateTimeField(source="date_requested", **opt_field)
+    date_due = DateTimeField(**opt_field)
+    date_completed = DateTimeField(**opt_field)
+
+
+    def pre_process(self, data: dict) -> None:
+        data["type"] = self.Meta.type_map.get(data.get("type")) or None
+        self.apply_default_value(data, "date_due", data.get("date_requested") + timedelta(days=30))
 
 
 class JournalArticleRoundSerializer(TransporterSerializer):
