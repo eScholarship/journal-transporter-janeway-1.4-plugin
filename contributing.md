@@ -4,6 +4,7 @@
 
 Bug reports are welcome. Please adhere to the following guidelines:
 
+* First, ensure that the bug you're encountering is in this plugin and not part of Journal Transporter. If the issue occurs as part of the transfer process itself, please check [the Journal Transporter repo](https://github.com/castiron/journal-transporter).
 * Before submitting an issue, search existing open issues to make sure you're not creating a duplicate. If an issue already exists, comment on it instead of creating a new issue.
 * If you're unable to find an open issue about your problem, open a new issue.
   * Write a descriptive title
