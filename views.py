@@ -1,15 +1,12 @@
-# Suppress linter errors for missing Janeway imports
-#pylint: disable=E0611
-#pylint: disable=E0401
-
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 
 from rest_framework import viewsets, parsers
 
 from plugins.journal_transporter import serializers
 
 from journal.models import Journal, Issue
-from review.models import ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment, ReviewFormAnswer, EditorAssignment, RevisionRequest
+from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment, ReviewFormAnswer,
+                           EditorAssignment, RevisionRequest)
 from submission.models import Section, Article, FrozenAuthor
 from core.models import Account, AccountRole, File
 from core import files
@@ -24,18 +21,18 @@ class NestedViewSetMixin:
             super().get_queryset()
         )
 
-
     def filter_queryset_by_parents_lookups(self, queryset):
         parents_query_dict = self.get_parents_query_dict()
         if parents_query_dict:
-            filtered_query = { key: parents_query_dict[key] for key in self.parent_keys } if hasattr(self, "parent_keys") else parents_query_dict
+            filtered_query = {
+                key: parents_query_dict[key] for key in self.parent_keys
+            } if hasattr(self, "parent_keys") else parents_query_dict
             try:
                 return queryset.filter(**filtered_query)
             except ValueError:
                 raise Http404
         else:
             return queryset
-
 
     def get_parents_query_dict(self):
         result = {}

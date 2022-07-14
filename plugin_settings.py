@@ -8,6 +8,7 @@ VERSION = "0.1"
 SHORT_NAME = "journal_transporter"
 MANAGER_URL = "transporter_manager"
 
+
 class CDLJournalTransferJaneway(plugins.Plugin):
     plugin_name = PLUGIN_NAME
     display_name = PLUGIN_NAME
@@ -22,11 +23,13 @@ class CDLJournalTransferJaneway(plugins.Plugin):
 
     is_workflow_plugin = False
 
+
 def install():
     CDLJournalTransferJaneway.install()
     update_settings(
         file_path="plugins/journal_transporter/install/settings.json"
     )
+
 
 def hook_registry():
     """

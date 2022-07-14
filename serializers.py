@@ -1,30 +1,28 @@
-# Suppress linter errors for missing Janeway imports
-#pylint: disable=E0611
-#pylint: disable=E0401
-
 from datetime import datetime, timedelta
-from types import LambdaType
 from bs4 import BeautifulSoup
 
-from django.db.models import Model, FieldDoesNotExist, Q
+from django.db.models import Model, Q
 from django.utils import timezone
 
-from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField, IntegerField, DateTimeField, EmailField, FileField, SlugRelatedField, PrimaryKeyRelatedField, BooleanField, ListField
+from rest_framework.serializers import (ModelSerializer, SerializerMethodField, CharField,
+                                        IntegerField, DateTimeField, EmailField, FileField,
+                                        SlugRelatedField, BooleanField, ListField)
 
 from journal.models import Journal, Issue, IssueType
-from submission import models as submission_models
 from submission.models import Section, Article, FrozenAuthor
-from review.models import ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment, ReviewAssignmentAnswer, ReviewerRating, EditorAssignment, RevisionRequest
-from core.models import Account, AccountRole, Country, File, Galley, Role, Workflow, WorkflowElement, WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES
-from core import files, workflow
+from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment,
+                           ReviewAssignmentAnswer, ReviewerRating, EditorAssignment,
+                           RevisionRequest)
+from core.models import Account, AccountRole, Country, File, Galley, Role, WorkflowElement, \
+    WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES
+from core import files
 
-from utils import shared as utils
-from submission import logic as submission_logic
 
 import re
 
-opt_str_field = { "required": False, "allow_null": True, "allow_blank": True }
-opt_field = { "required": False, "allow_null": True }
+OPT_STR_FIELD = {"required": False, "allow_null": True, "allow_blank": True}
+OPT_FIELD = {"required": False, "allow_null": True}
+
 
 class TransporterSerializer(ModelSerializer):
     """
@@ -60,17 +58,14 @@ class TransporterSerializer(ModelSerializer):
         # Each serializer requires that a model be defined
         model = None
 
-
     # All responses should output a source_record_key, a unique identifier for the created record.
     # This is used by Journal Transporter to build target_record_keys, which are in turn
     # used to reference Janeway foreign key relations.
     source_record_key = SerializerMethodField()
 
-
     def get_source_record_key(self, obj: Model) -> str:
         """Builds a source record key from model class name and model PK."""
         return "{0}:{1}".format(obj.__class__.__name__, obj.pk)
-
 
     def is_valid(self, raise_exception=False):
         """
@@ -93,8 +88,7 @@ class TransporterSerializer(ModelSerializer):
         self.apply_defaults(self.initial_data)
         return super().is_valid(raise_exception)
 
-
-    def create(self, validated_data: dict, upsert: bool=False) -> Model:
+    def create(self, validated_data: dict, upsert: bool = False) -> Model:
         """
         Create and return a new model instance, given the validated data.
 
@@ -121,7 +115,6 @@ class TransporterSerializer(ModelSerializer):
 
         return instance
 
-
     def extract_foreign_keys(self, data: dict):
         """
         Extract foreign keys and attempts to properly assign them to existing records.
@@ -137,7 +130,6 @@ class TransporterSerializer(ModelSerializer):
             for lookup_key, foreign_key in self.Meta.foreign_keys.items():
                 self.__extract_foreign_key(data, lookup_key, foreign_key)
 
-
     def __extract_foreign_key(self, data, lookup_key, foreign_key):
         """Extract a found foreign key value."""
         found = data.pop(lookup_key, None)
@@ -146,12 +138,10 @@ class TransporterSerializer(ModelSerializer):
             if trk:
                 data[foreign_key] = self.parse_target_record_key(trk)
 
-
     @staticmethod
     def parse_target_record_key(value) -> str:
         """Parses a JTON record key to extract the local primary key."""
         return value.split(":")[-1]
-
 
     def strip_html_content(self, data: dict) -> None:
         """
@@ -172,7 +162,6 @@ class TransporterSerializer(ModelSerializer):
             soup = BeautifulSoup(v, 'html.parser')
             data[k] = soup.get_text(separator="\n")
 
-
     def apply_defaults(self, data):
         """
         Apply default values to existing dict items with null or blank values.
@@ -188,12 +177,10 @@ class TransporterSerializer(ModelSerializer):
             for key, value in self.Meta.defaults.items():
                 self.apply_default_value(data, key, value)
 
-
     def apply_default_value(self, data, field, default) -> None:
         """Apply default value to null or blank item."""
-        if not (data.get(field) or data.get(field) == False):
+        if not (data.get(field) or data.get(field) is False):
             data[field] = default
-
 
     def extract_setting_values(self, data: dict) -> list:
         """
@@ -207,13 +194,12 @@ class TransporterSerializer(ModelSerializer):
             data: dict
                 The pre-validated data dict.
         """
-        if not hasattr(self.Meta, "setting_values") : return {}
+        if not hasattr(self.Meta, "setting_values"): return {}
 
         ret = {}
         for key in self.Meta.setting_values:
-            if key in data : ret[key] = data.pop(key)
+            if key in data: ret[key] = data.pop(key)
         return ret
-
 
     def apply_parent_id(self, data) -> None:
         """
@@ -236,13 +222,12 @@ class TransporterSerializer(ModelSerializer):
 
             if hasattr(self.Meta.model, fk_record_name):
                 fk_model = getattr(self.Meta.model, fk_record_name).field.rel.to
-                lookup = { fk_lookup_key: value }
+                lookup = {fk_lookup_key: value}
                 found = fk_model.objects.get(**lookup)
 
                 if found:
                     setattr(self, fk_record_name, found)
                     data["{0}_id".format(fk_record_name)] = found.pk
-
 
     ############
     # Callbacks
@@ -267,7 +252,6 @@ class TransporterSerializer(ModelSerializer):
         """
         pass
 
-
     def pre_process(self, data: dict) -> None:
         """
         Performs any necessary pre-processing of the data dict.
@@ -284,7 +268,6 @@ class TransporterSerializer(ModelSerializer):
                 The post-validated but uncommitted data.
         """
         pass
-
 
     def post_process(self, model: Model, data: dict) -> None:
         """
@@ -333,23 +316,23 @@ class UserSerializer(TransporterSerializer):
             "affiliation": "None"
         }
 
-
     email = EmailField()
-    first_name = CharField(**opt_str_field)
-    last_name = CharField(**opt_str_field)
-    middle_name = CharField(**opt_str_field)
-    affiliation = CharField(source="institution", default="None", max_length=1000, **opt_str_field)
-    department = CharField(**opt_str_field)
-    salutation = CharField(**opt_str_field)
-    country_code = SlugRelatedField(source="country", slug_field="code", queryset=Country.objects.all(), **opt_field)
-    biography = CharField(**opt_str_field)
-    signature = CharField(**opt_str_field)
-
+    first_name = CharField(**OPT_STR_FIELD)
+    last_name = CharField(**OPT_STR_FIELD)
+    middle_name = CharField(**OPT_STR_FIELD)
+    affiliation = CharField(source="institution", default="None", max_length=1000, **OPT_STR_FIELD)
+    department = CharField(**OPT_STR_FIELD)
+    salutation = CharField(**OPT_STR_FIELD)
+    country_code = SlugRelatedField(source="country", slug_field="code", queryset=Country.objects.all(), **OPT_FIELD)
+    biography = CharField(**OPT_STR_FIELD)
+    signature = CharField(**OPT_STR_FIELD)
 
     def before_validation(self, data: dict) -> None:
         # Ensure country_code (country) is a valid code from COUNTRY_CHOICES list, else None
         if data.get("country_code"):
-            matches = [code for code, country_name in COUNTRY_CHOICES if data["country_code"].casefold() in [code.casefold(), country_name.casefold()]]
+            matches = [code for code, country_name in COUNTRY_CHOICES
+                       if data["country_code"].casefold() in [code.casefold(), country_name.casefold()]
+                       ]
             data["country_code"] = matches[0] if len(matches) else None
         else:
             data["country_code"] = None
@@ -373,7 +356,8 @@ class UserSerializer(TransporterSerializer):
 
 
 class JournalSerializer(TransporterSerializer):
-    """Transporter serializer for journals (/journals/)
+    """
+    Transporter serializer for journals (/journals/).
 
     Maps to journal.models.Journal.
     """
@@ -396,17 +380,15 @@ class JournalSerializer(TransporterSerializer):
 
     path = CharField(source="code")
     title = CharField(source="name")
-    description = CharField(**opt_str_field)
-    online_issn = CharField(source="issn", **opt_str_field)
-    print_issn = CharField(**opt_str_field)
-
+    description = CharField(**OPT_STR_FIELD)
+    online_issn = CharField(source="issn", **OPT_STR_FIELD)
+    print_issn = CharField(**OPT_STR_FIELD)
 
     def pre_process(self, data: dict) -> None:
         self.apply_default_value(data, "domain", "https://example.com/{0}".format(data["code"]))
 
-
     def post_process(self, journal: Journal, data: dict) -> None:
-        ## TODO - Need to look into importing article images if they exist
+        # TODO - Need to look into importing article images if they exist
         journal.disable_article_images = True
 
         # Mimic regular journal creation process
@@ -436,16 +418,15 @@ class JournalReviewFormSerializer(TransporterSerializer):
         fields = tuple(field_map.keys())
 
     title = CharField(source="name")
-    slug = CharField(**opt_str_field)
-    description = CharField(source="intro", **opt_str_field)
-    thanks = CharField(**opt_str_field)
+    slug = CharField(**OPT_STR_FIELD)
+    description = CharField(source="intro", **OPT_STR_FIELD)
+    thanks = CharField(**OPT_STR_FIELD)
     deleted = BooleanField(default=False)
 
     def before_validation(self, data: dict):
         # Reverse JTON "active" to disabled
         if data.get("active") and not data.get("deleted"):
             data["deleted"] = not data.get("active")
-
 
     def pre_process(self, data):
         # If slug is blank, set to parameterized name.
@@ -480,23 +461,21 @@ class JournalReviewFormElementSerializer(TransporterSerializer):
             "small_text": "text",
             "text": "text",
             "textarea": "textarea",
-            "checkboxes": "text", # Concat multiselect checks to string
+            "checkboxes": "text",  # Concat multiselect checks to string
             "checkbox": "check",
             "check": "check",
             "radio_buttons": "select"
         }
         sentence_terminators = re.compile("\\.|\\?|!")
 
-
     question = CharField(source="name")
-    help_text = CharField(**opt_str_field)
+    help_text = CharField(**OPT_STR_FIELD)
     type = CharField(source="kind")
-    responses = ListField(source="choices", child=CharField(), **opt_field)
-    required = BooleanField(default=False, **opt_field)
-    sequence = IntegerField(source="order", default=0, **opt_field)
-    width = CharField(default='large-12 columns', **opt_str_field)
-    visible_to_author = BooleanField(source="default_visibility", default=True, **opt_field)
-
+    responses = ListField(source="choices", child=CharField(), **OPT_FIELD)
+    required = BooleanField(default=False, **OPT_FIELD)
+    sequence = IntegerField(source="order", default=0, **OPT_FIELD)
+    width = CharField(default='large-12 columns', **OPT_STR_FIELD)
+    visible_to_author = BooleanField(source="default_visibility", default=True, **OPT_FIELD)
 
     def pre_process(self, data: dict):
         # Map field type, default to text
@@ -521,21 +500,20 @@ class JournalReviewFormElementSerializer(TransporterSerializer):
         max_length = name_field.max_length
 
         # If question length < max length, there's nothing to do here.
-        if len(question) <= max_length or not max_length : return
+        if len(question) <= max_length or not max_length: return
 
         # Otherwise, find the last sentence terminator before max length
-        substr = question[0 : max_length]
+        substr = question[0:max_length]
         terminator_matches = self.Meta.sentence_terminators.search(substr)
         pruned_question_length = terminator_matches.end() if terminator_matches else max_length
 
-        data["name"] = question[0 : pruned_question_length]
-        data["help_text"] = question[pruned_question_length : len(question)] + help_text
-
+        data["name"] = question[0:pruned_question_length]
+        data["help_text"] = question[pruned_question_length:len(question)] + help_text
 
     def post_process(self, obj: ReviewFormElement, data: dict):
         # Add reference to this element to the already-existing form
         form = ReviewForm.objects.get(pk=self.review_form_id)
-        if form : form.elements.add(obj)
+        if form: form.elements.add(obj)
 
 
 class JournalRoleSerializer(TransporterSerializer):
@@ -568,7 +546,6 @@ class JournalRoleSerializer(TransporterSerializer):
             "typesetter": "Typesetter"
         }
 
-
     user_id = IntegerField()
     role_id = IntegerField()
     role = CharField(read_only=True)
@@ -579,15 +556,13 @@ class JournalRoleSerializer(TransporterSerializer):
         if role:
             data["role_id"] = role.pk
 
-
     def create(self, data: dict) -> Role:
         # If AccountRole already exists, we can't create a new one, so just return the existing
         return super().create(data, upsert=True)
 
-
     def __find_role(self, imported_role_name: str):
         role_name = self.Meta.role_map.get(imported_role_name)
-        if not role_name : return
+        if not role_name: return
 
         role = Role.objects.filter((Q(name=role_name) | Q(slug=role_name))).first()
         if not role:
@@ -621,19 +596,22 @@ class JournalIssueSerializer(TransporterSerializer):
             "date_published": str(timezone.now() + timedelta(days=(365 * 50)))
         }
 
-    title = CharField(source = "issue_title", **opt_str_field)
-    volume = IntegerField(default=1, **opt_field)
-    number = CharField(source = "issue", default="1", **opt_str_field)
-    date_published = DateTimeField(source = "date", **opt_field)
-    description = CharField(source = "issue_description", **opt_str_field)
-    sequence = IntegerField(source = "order", **opt_field)
+    title = CharField(source="issue_title", **OPT_STR_FIELD)
+    volume = IntegerField(default=1, **OPT_FIELD)
+    number = CharField(source="issue", default="1", **OPT_STR_FIELD)
+    date_published = DateTimeField(source="date", **OPT_FIELD)
+    description = CharField(source="issue_description", **OPT_STR_FIELD)
+    sequence = IntegerField(source="order", **OPT_FIELD)
 
     issue_type = CharField(source="issue_type.code", default="issue", read_only=True)
     issue_type_id = IntegerField(write_only=True, required=False)
 
     def pre_process(self, data: dict) -> None:
         # We can't create a field out of issue_type, so grab it from the initial data, if it exists
-        issue_type, _created = IssueType.objects.get_or_create(journal=self.journal, code=self.initial_data.get("issue_type", "issue"))
+        issue_type, _created = IssueType.objects.get_or_create(
+            journal=self.journal,
+            code=self.initial_data.get("issue_type", "issue")
+        )
         data["issue_type_id"] = issue_type.pk
 
         # Add to end of issue order, by default
@@ -654,7 +632,7 @@ class JournalSectionSerializer(TransporterSerializer):
             "sequence"
         )
 
-    title = CharField(source="name", **opt_str_field)
+    title = CharField(source="name", **OPT_STR_FIELD)
     sequence = IntegerField(default=0, allow_null=True)
 
 
@@ -701,17 +679,16 @@ class JournalArticleSerializer(TransporterSerializer):
             "published": "Published"
         }
 
-
-    title = CharField(**opt_str_field)
-    abstract = CharField(**opt_str_field)
-    language = CharField(**opt_str_field)
+    title = CharField(**OPT_STR_FIELD)
+    abstract = CharField(**OPT_STR_FIELD)
+    language = CharField(**OPT_STR_FIELD)
     date_started = DateTimeField(allow_null=True)
     date_accepted = DateTimeField(required=False, allow_null=True)
     date_declined = DateTimeField(required=False, allow_null=True)
     date_submitted = DateTimeField(required=False, allow_null=True)
     date_published = DateTimeField(required=False, allow_null=True)
     date_updated = DateTimeField(required=False, allow_null=True)
-    status = CharField(source="stage", default="draft", **opt_str_field)
+    status = CharField(source="stage", default="draft", **OPT_STR_FIELD)
     section_id = IntegerField(required=False, allow_null=True)
 
     def before_validation(self, data: dict) -> None:
@@ -721,7 +698,6 @@ class JournalArticleSerializer(TransporterSerializer):
 
         if data.get("sections") and data["sections"][0] and data["sections"][0]["target_record_key"]:
             data["section_id"] = data["sections"][0]["target_record_key"].split(":")[-1]
-
 
     def pre_process(self, data: dict) -> None:
         # Assign a default section if not otherwise defined.
@@ -737,7 +713,6 @@ class JournalArticleSerializer(TransporterSerializer):
                 data["stage"] = "Rejected"
             else:
                 data["stage"] = "Unsubmitted"
-
 
     def post_process(self, model, data):
         # Assign issues (M2M)
@@ -774,16 +749,15 @@ class JournalArticleEditorSerializer(TransporterSerializer):
         }
         fields = tuple(field_map.keys())
 
-    notified = BooleanField(**opt_field)
-    date_notified = DateTimeField(source="assigned", **opt_field)
-    editor_type = CharField(default="editor", **opt_str_field)
+    notified = BooleanField(**OPT_FIELD)
+    date_notified = DateTimeField(source="assigned", **OPT_FIELD)
+    editor_type = CharField(default="editor", **OPT_STR_FIELD)
 
     editor_id = IntegerField()
 
     def pre_process(self, data: dict):
         data["notified"] = bool(data.get("date_notified"))
         data["assigned"] = data.get("assigned") or self.article.date_submitted or datetime.now()
-
 
 
 class JournalArticleAuthorSerializer(UserSerializer):
@@ -815,19 +789,17 @@ class JournalArticleAuthorSerializer(UserSerializer):
         }
         fields = tuple(field_map.keys())
 
-
-    email = EmailField(source="frozen_email", **opt_str_field)
-    first_name = CharField(**opt_str_field)
-    last_name = CharField(**opt_str_field)
-    middle_name = CharField(**opt_str_field)
-    affiliation = CharField(source="institution", default="None", max_length=1000, **opt_str_field)
-    department = CharField(**opt_str_field)
-    salutation = CharField(source="name_prefix", **opt_str_field)
-    country_code = SlugRelatedField(source="country", slug_field="code", queryset=Country.objects.all(), **opt_field)
-    biography = CharField(**opt_str_field)
-    signature = CharField(**opt_str_field)
+    email = EmailField(source="frozen_email", **OPT_STR_FIELD)
+    first_name = CharField(**OPT_STR_FIELD)
+    last_name = CharField(**OPT_STR_FIELD)
+    middle_name = CharField(**OPT_STR_FIELD)
+    affiliation = CharField(source="institution", default="None", max_length=1000, **OPT_STR_FIELD)
+    department = CharField(**OPT_STR_FIELD)
+    salutation = CharField(source="name_prefix", **OPT_STR_FIELD)
+    country_code = SlugRelatedField(source="country", slug_field="code", queryset=Country.objects.all(), **OPT_FIELD)
+    biography = CharField(**OPT_STR_FIELD)
+    signature = CharField(**OPT_STR_FIELD)
     primary_contact = SerializerMethodField()
-
 
     def create(self, validated_data: dict) -> FrozenAuthor:
         viewset = self.context['view']
@@ -840,7 +812,6 @@ class JournalArticleAuthorSerializer(UserSerializer):
 
         return frozen_author
 
-
     def post_process(self, record: FrozenAuthor, data: dict):
         if record.frozen_email:
             user = Account.objects.filter(email=record.frozen_email).first()
@@ -848,9 +819,8 @@ class JournalArticleAuthorSerializer(UserSerializer):
                 self.article.authors.add(user)
                 # Primary contact is not a model attr, so look it up in the initial (unvalidated) data.
                 if self.initial_data.get("primary_contact"):
-                    self.article.correspondence_author = self.author
+                    self.article.correspondence_author = user
                 self.article.save()
-
 
     def get_primary_contact(self, record: FrozenAuthor):
         return record.is_correspondence_author
@@ -877,13 +847,12 @@ class JournalArticleFileSerializer(TransporterSerializer):
         fields = tuple(field_map.keys())
 
     file = FileField(write_only=True, use_url=False, allow_empty_file=True)
-    description = CharField(**opt_str_field)
-    label = CharField(**opt_str_field)
-    original_filename = CharField(max_length=1000, **opt_str_field)
+    description = CharField(**OPT_STR_FIELD)
+    label = CharField(**OPT_STR_FIELD)
+    original_filename = CharField(max_length=1000, **OPT_STR_FIELD)
     is_galley_file = BooleanField(source="is_galley", default=False)
 
     is_supplementary_file = BooleanField(read_only=True, default=False)
-
 
     def create(self, validated_data: dict) -> Model:
         self.article = self.get_article()
@@ -898,7 +867,10 @@ class JournalArticleFileSerializer(TransporterSerializer):
                 file = files.overwrite_file(raw_file, replaced_file, (self.article, self.article.pk))
         else:
             # TEST - this needs to become a real user reference
-            user = self.context["view"].request.user if hasattr(self.context["view"].request, "user") else Account.objects.all()[0]
+            if hasattr(self.context["view"].request, "user"):
+                user = self.context["view"].request.user
+            else:
+                Account.objects.all()[0]
 
             file = files.save_file_to_article(raw_file,
                                               self.article,
@@ -906,10 +878,9 @@ class JournalArticleFileSerializer(TransporterSerializer):
                                               validated_data.get("label") or validated_data.get("original_filename"),
                                               description=validated_data.get("description"),
                                               is_galley=(validated_data.get("is_galley") or False)
-            )
+                                              )
 
         return file
-
 
     def post_process(self, record: File, data: dict):
         if data.get("is_galley"):
@@ -919,7 +890,6 @@ class JournalArticleFileSerializer(TransporterSerializer):
             self.article.supplementary_files.add(record)
         elif not data.get("parent_target_record_key"):
             self.article.manuscript_files.add(record)
-
 
     def get_article(self) -> Article:
         # The File model's article reference is not a foreign key, so regular parent
@@ -945,7 +915,8 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
             "decision": "type",
             "date": "date_requested",
             "date_due": "date_due",
-            "date_completed": "date_completed"
+            "date_completed": "date_completed",
+            "editor_id": "editor_id"
         }
         fields = tuple(field_map.keys())
         foreign_keys = {
@@ -956,19 +927,17 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
             "revisions": "minor_revisions"
         }
 
-
-    article_id = IntegerField()
     editor_id = IntegerField()
 
-    comment = CharField(source="editor_note")
-    author_comment = CharField(source="author_note", **opt_str_field)
-    date = DateTimeField(source="date_requested", **opt_field)
-    date_due = DateTimeField(**opt_field)
-    date_completed = DateTimeField(**opt_field)
-
+    decision = CharField(source="type")
+    comment = CharField(source="editor_note", default="None", **OPT_STR_FIELD)
+    author_comment = CharField(source="author_note", **OPT_STR_FIELD)
+    date = DateTimeField(source="date_requested", **OPT_FIELD)
+    date_due = DateTimeField(**OPT_FIELD)
+    date_completed = DateTimeField(**OPT_FIELD)
 
     def pre_process(self, data: dict) -> None:
-        data["type"] = self.Meta.type_map.get(data.get("type")) or None
+        data["type"] = self.Meta.type_map.get(data.get("type")) or "minor_revisions"
         self.apply_default_value(data, "date_due", data.get("date_requested") + timedelta(days=30))
 
 
@@ -988,15 +957,16 @@ class JournalArticleRoundSerializer(TransporterSerializer):
         fields = tuple(field_map.keys())
 
     round = IntegerField(source="round_number")
-    date = DateTimeField(source="date_started", **opt_field)
-
+    date = DateTimeField(source="date_started", **OPT_FIELD)
 
     def post_process(self, record: ReviewRound, data: dict):
         if record.round_number == 1:
             workflow_element = WorkflowElement.objects.get(journal_id=self.journal_id, element_name="review")
             existing = WorkflowLog.objects.filter(article=record.article, element=workflow_element)
             if not existing:
-                WorkflowLog.objects.create(article=record.article, element=workflow_element, timestamp=record.date_started)
+                WorkflowLog.objects.create(article=record.article,
+                                           element=workflow_element,
+                                           timestamp=record.date_started)
 
 
 class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
@@ -1046,20 +1016,20 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         }
         fields = tuple(field_map.keys())
 
-    recommendation = CharField(source="decision", **opt_str_field)
-    responded = BooleanField(source="is_complete", **opt_field)
-    comments = CharField(source="comments_for_editor", **opt_str_field)
-    has_response = BooleanField(source="is_complete", **opt_field)
+    recommendation = CharField(source="decision", **OPT_STR_FIELD)
+    responded = BooleanField(source="is_complete", **OPT_FIELD)
+    comments = CharField(source="comments_for_editor", **OPT_STR_FIELD)
+    has_response = BooleanField(source="is_complete", **OPT_FIELD)
     date_due = DateTimeField()
-    date_confirmed = DateTimeField(source="date_accepted", **opt_field)
-    date_declined = DateTimeField(**opt_field)
-    date_completed = DateTimeField(source="date_complete", **opt_field)
-    date_reminded = DateTimeField(**opt_field)
+    date_confirmed = DateTimeField(source="date_accepted", **OPT_FIELD)
+    date_declined = DateTimeField(**OPT_FIELD)
+    date_completed = DateTimeField(source="date_complete", **OPT_FIELD)
+    date_reminded = DateTimeField(**OPT_FIELD)
 
-    reviewer_id = IntegerField(**opt_field)
-    editor_id = IntegerField(**opt_field)
-    review_file_id = IntegerField(**opt_field)
-    review_form_id = IntegerField(source="form_id", **opt_field)
+    reviewer_id = IntegerField(**OPT_FIELD)
+    editor_id = IntegerField(**OPT_FIELD)
+    review_file_id = IntegerField(**OPT_FIELD)
+    review_form_id = IntegerField(source="form_id", **OPT_FIELD)
 
     quality = SerializerMethodField()
 
@@ -1067,20 +1037,17 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         rating = obj.review_rating
         return (rating.rating * 10) if rating else None
 
-
     def before_validation(self, data: dict):
         if not data.get("date_due"):
             data["date_due"] = data.get("date_completed") or data.get("date_assigned")
         comment = data.get("comments")
         data["comments"] = comment[0]["comments"] if isinstance(comment, list) and len(comment) > 0 else None
 
-
     def pre_process(self, data: dict):
         # Map decision
         if data.get("decision"):
             normalized_decision = data.get("decision").replace(" ", "_").lower()
             data["decision"] = self.Meta.decision_map.get(normalized_decision) or data.get("decision")
-
 
     def post_process(self, record: ReviewAssignment, data: dict):
         # Build review rating, which comes in as a value between 0-100
@@ -1094,7 +1061,8 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
 
 class JournalArticleRoundAssignmentResponseSerializer(TransporterSerializer):
     """
-    Transporter serializer for review assignment responses (journals/{id}/articles/{id}/rounds/{id}/assignments{id}/response/).
+    Transporter serializer for review assignment responses
+    (journals/{id}/articles/{id}/rounds/{id}/assignments{id}/response/).
 
     Maps to review.models.ReviewAssignmentAnswer.
     """
@@ -1110,14 +1078,12 @@ class JournalArticleRoundAssignmentResponseSerializer(TransporterSerializer):
         }
         fields = tuple(field_map.keys())
 
-    response_value = CharField(source="answer", **opt_str_field)
+    response_value = CharField(source="answer", **OPT_STR_FIELD)
     review_form_element_id = IntegerField(source="original_element_id")
-
 
     def before_validation(self, data: dict):
         if data.get("response_value") and isinstance(data.get("response_value"), list):
             data["response_value"] = "; ".join(data.get("response_value"))
-
 
     def post_process(self, model: ReviewAssignmentAnswer, data: dict):
         model.original_element.snapshot(model)
