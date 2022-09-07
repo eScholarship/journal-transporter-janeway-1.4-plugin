@@ -1140,6 +1140,7 @@ class JournalArticleRoundAssignmentResponseSerializer(TransporterSerializer):
 
     response_value = CharField(source="answer", **OPT_STR_FIELD)
     review_form_element_id = IntegerField(source="original_element_id")
+    visible_to_author = BooleanField(source="author_can_see", default=False, **OPT_FIELD)
 
     def before_validation(self, data: dict):
         if data.get("response_value") and isinstance(data.get("response_value"), list):
