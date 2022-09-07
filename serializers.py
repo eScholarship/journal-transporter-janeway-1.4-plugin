@@ -750,6 +750,9 @@ class JournalArticleSerializer(TransporterSerializer):
             else:
                 data["stage"] = "Unsubmitted"
 
+        # If date_started is blank, use date_submitted (else defaults today)
+        if not data.get("date_started"): data["date_started"] = data["date_submitted"]
+
     def post_process(self, model, data):
         # Assign issues (M2M)
         init_data = self.initial_data
