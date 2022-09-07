@@ -9,7 +9,7 @@ from rest_framework.serializers import (ModelSerializer, SerializerMethodField, 
                                         SlugRelatedField, BooleanField, ListField)
 
 from journal.models import Journal, Issue, IssueType
-from submission.models import Section, Article, FrozenAuthor
+from submission.models import Article, Field, FieldAnswer, FrozenAuthor, Section
 from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment,
                            ReviewAssignmentAnswer, ReviewerRating, EditorAssignment,
                            RevisionRequest)
@@ -396,7 +396,39 @@ class JournalSerializer(TransporterSerializer):
         # Create a default IssueType (needed for importing Issues later)
         IssueType.objects.create(journal=journal, code="issue", pretty_name="Issue")
 
+        # Create a custom fields
+        self.create_custom_fields(journal)
+
         journal.save()
+
+    def create_custom_fields(self, journal: Journal) -> None:
+        """
+        OJS contains a number of journal and article fields that Janeway does not.
+        Create non-required custom fields to capture them here.
+
+        TODO: This is specific to OJS. Abstraction needed.
+        """
+        # Acknowledgements
+        Field.objects.create(press=journal.press,
+                             journal=journal,
+                             name="Acknowledgements",
+                             kind="textarea",
+                             required=False,
+                             display=True,
+                             order=0,
+                             help_text="Ackowledgements"
+                             )
+
+        # Object Identifiers (other than those contained on the Article, i.e. DOI)
+        Field.objects.create(press=journal.press,
+                             journal=journal,
+                             name="external_identifiers",
+                             kind="text",
+                             required=False,
+                             display=False,
+                             order=0,
+                             help_text="External identifiers"
+                             )
 
 
 class JournalReviewFormSerializer(TransporterSerializer):
@@ -424,7 +456,7 @@ class JournalReviewFormSerializer(TransporterSerializer):
     deleted = BooleanField(default=False)
 
     def before_validation(self, data: dict):
-        # Reverse JTON "active" to disabled
+        # Reverse "active" to disabled
         if data.get("active") and not data.get("deleted"):
             data["deleted"] = not data.get("active")
 
@@ -678,11 +710,15 @@ class JournalArticleSerializer(TransporterSerializer):
             "proofing": "Proofing",
             "published": "Published"
         }
+        custom_fields = [
+            "acknowledgements"
+        ]
 
     title = CharField(**OPT_STR_FIELD)
     abstract = CharField(**OPT_STR_FIELD)
+    cover_letter = CharField(source="comments_editor", **OPT_STR_FIELD)
     language = CharField(**OPT_STR_FIELD)
-    date_started = DateTimeField(allow_null=True)
+    date_started = DateTimeField(required=False, allow_null=True)
     date_accepted = DateTimeField(required=False, allow_null=True)
     date_declined = DateTimeField(required=False, allow_null=True)
     date_submitted = DateTimeField(required=False, allow_null=True)
@@ -724,6 +760,30 @@ class JournalArticleSerializer(TransporterSerializer):
                 model.issues.add(Issue.objects.get(pk=issue_pk))
 
             model.save()
+
+        # Assign custom field values
+        self.assign_custom_field_values(model)
+
+    def assign_custom_field_values(self, article: Article) -> None:
+        """
+        Extracts custom field values from initial_data and creates associated FieldAnswers.
+
+        The lookup keys in initial_data are expected to be lowercased and snake_cased versions of the actual
+        custom field names (i.e. field "Cool Stuff" will be looked up with key "cool_stuff"). The converter for this
+        is pretty naive; it will only downcase and convert spaces to underscores.
+
+        Parameters:
+            article: Article
+                The article to which the FieldAnswers should be assigned
+
+        Returns: None
+        """
+        for field_name in self.Meta.custom_fields:
+            answer = self.initial_data.get(field_name.lower().replace(" ", "_"))
+            if answer:
+                field = Field.objects.get(journal=article.journal, name=field_name)
+                if field:
+                    FieldAnswer.objects.create(field=field, article=article, answer=answer)
 
 
 class JournalArticleEditorSerializer(TransporterSerializer):
