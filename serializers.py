@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 
 from django.db.models import Model, Q
 from django.utils import timezone
+from django.contrib.contenttypes.models import ContentType
 
 from rest_framework.serializers import (ModelSerializer, SerializerMethodField, CharField,
                                         IntegerField, DateTimeField, EmailField, FileField,
@@ -15,6 +16,7 @@ from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAss
                            RevisionRequest)
 from core.models import Account, AccountRole, Country, File, Galley, Role, WorkflowElement, \
     WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES
+from utils.models import LogEntry
 from core import files
 
 
@@ -553,6 +555,9 @@ class JournalRoleSerializer(TransporterSerializer):
     Transporter serializer for user roles (/journals/{id}/roles/{user_id}/)
 
     Maps to core.AccountRole.
+
+    If a role is not found, this will fail and return 400. That is intentional and expected behavior for an unmapped
+    role.
     """
     class Meta:
         model = AccountRole
@@ -963,6 +968,41 @@ class JournalArticleFileSerializer(TransporterSerializer):
         kwargs = viewset.get_parents_query_dict()
 
         return Article.objects.get(pk=kwargs["article__id"])
+
+
+class JournalArticleLogEntrySerializer(TransporterSerializer):
+    """
+    Transporter serializer for article log entries (/journals/{id}/articles/{id}/logs/).
+
+    Maps to utils.models.LogEntry.
+    """
+    class Meta:
+        model = LogEntry
+        field_map = {
+            "source_record_key": None,
+            "date": "date",
+            "title": "subject",
+            "message": "description",
+            "log_level": "level",
+            "user_id": "actor_id",
+            "ip_address": "ip_address",
+        }
+        fields = tuple(field_map.keys())
+        foreign_keys = {
+            "actor": "user_id"
+        }
+
+    user_id = IntegerField(source="actor_id")
+
+    date = DateTimeField()
+    title = CharField(source="subject", **OPT_STR_FIELD)
+    message = CharField(source="description", **OPT_STR_FIELD)
+    log_level = CharField(source="level", **OPT_STR_FIELD)
+    ip_address = CharField(**OPT_STR_FIELD)
+
+    def pre_process(self, data: dict) -> None:
+        # For now, assume user
+        data["content_type"] = ContentType.objects.get(app_label="core", model="account")
 
 
 class JournalArticleRevisionRequestSerializer(TransporterSerializer):

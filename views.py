@@ -9,6 +9,7 @@ from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAss
                            EditorAssignment, RevisionRequest)
 from submission.models import Section, Article, FrozenAuthor
 from core.models import Account, AccountRole, File
+from utils.models import LogEntry
 from core import files
 
 
@@ -126,6 +127,11 @@ class JournalArticleFileViewSet(TransporterViewSet):
         article = Article.objects.get(pk=kwargs["parent_lookup_article_id"])
         file = File.objects.get(pk=kwargs["pk"])
         return files.serve_file(request, file, article)
+
+
+class JournalArticleLogEntryViewSet(TransporterViewSet):
+    queryset = LogEntry.objects.all()
+    serializer_class = serializers.JournalArticleLogEntrySerializer
 
 
 class JournalArticleRevisionRequestViewSet(TransporterViewSet):

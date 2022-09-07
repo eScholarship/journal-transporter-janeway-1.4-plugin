@@ -143,6 +143,12 @@ article_authors_routes = article_routes.register(
     'journal-article-authors',
     parents_query_lookups=['journal__id', 'article__id']
 )
+article_log_entries_routes = article_routes.register(
+    r'log_entries',
+    views.JournalArticleLogEntryViewSet,
+    'journal-article-log-entries',
+    parents_query_lookups=['journal__id', 'article__id']
+)
 article_revision_request_routes = article_routes.register(
     r'revision_requests',
     views.JournalArticleRevisionRequestViewSet,
