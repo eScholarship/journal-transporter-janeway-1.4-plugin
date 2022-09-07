@@ -514,8 +514,8 @@ class JournalReviewFormElementSerializer(TransporterSerializer):
         data["kind"] = self.Meta.type_mappings.get(data.get("kind")) or "text"
 
         # Convert choices from array to pipe-separated string
-        if data.get("responses") and len(data.get("responses")):
-            data["responses"] = "|".join(data.get("responses"))
+        if data.get("choices") and len(data.get("choices")):
+            data["choices"] = "|".join(data.get("choices"))
 
         # Janeway limits the "name" (i.e. question) of each element to 200 chars.
         # Since some systems allow much longer questions, it's necessary to split longer questions
