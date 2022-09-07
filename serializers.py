@@ -688,7 +688,8 @@ class JournalArticleSerializer(TransporterSerializer):
             "date_published": "date_published",
             "date_updated": "date_updated",
             "status": "stage",
-            "section_id": "section_id"
+            "section_id": "section_id",
+            "cover_letter": "comments_editor"
         }
         defaults = {
             "title": "Unknown Article"
