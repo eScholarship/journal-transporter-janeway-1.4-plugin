@@ -758,6 +758,7 @@ class JournalArticleSerializer(TransporterSerializer):
 
             for issue_pk in issues:
                 model.issues.add(Issue.objects.get(pk=issue_pk))
+                if not model.projected_issue: model.projected_issue_id = issue_pk
 
             model.save()
 
