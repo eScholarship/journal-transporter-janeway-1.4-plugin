@@ -413,7 +413,7 @@ class JournalSerializer(TransporterSerializer):
         # Acknowledgements
         Field.objects.create(press=journal.press,
                              journal=journal,
-                             name="Acknowledgements",
+                             name="acknowledgements",
                              kind="textarea",
                              required=False,
                              display=True,
@@ -791,7 +791,7 @@ class JournalArticleSerializer(TransporterSerializer):
         for field_name in self.Meta.custom_fields:
             answer = self.initial_data.get(field_name.lower().replace(" ", "_"))
             if answer:
-                field = Field.objects.get(journal=article.journal, name=field_name)
+                field = Field.objects.filter(journal=article.journal, name=field_name).first()
                 if field:
                     FieldAnswer.objects.create(field=field, article=article, answer=answer)
 
