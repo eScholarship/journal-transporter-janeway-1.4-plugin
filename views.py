@@ -55,6 +55,7 @@ def manager(request):
 
 class TransporterViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     http_method_names = ['get', 'post']
+    parser_classes = [parsers.JSONParser, parsers.MultiPartParser]
 
     def delete(self, _request, *_args, **_kwargs):
         """Deleting resources through this plugin is not allowed."""
