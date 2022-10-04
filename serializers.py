@@ -982,27 +982,44 @@ class JournalArticleLogEntrySerializer(TransporterSerializer):
             "source_record_key": None,
             "date": "date",
             "title": "subject",
-            "message": "description",
-            "log_level": "level",
-            "user_id": "actor_id",
+            "description": "description",
+            "level": "level",
             "ip_address": "ip_address",
+            "user": "actor_id"
         }
         fields = tuple(field_map.keys())
         foreign_keys = {
-            "actor": "user_id"
+            "user": "user"
+        }
+        log_level_map = {
+            "notice": "Info",
+            "debug": "Debug",
+            "warn": "Error",
+            "error": "Error",
+            "fatal": "Error"
         }
 
-    user_id = IntegerField(source="actor_id")
+    user = IntegerField(source="actor_id", **OPT_FIELD)
 
     date = DateTimeField()
     title = CharField(source="subject", **OPT_STR_FIELD)
-    message = CharField(source="description", **OPT_STR_FIELD)
-    log_level = CharField(source="level", **OPT_STR_FIELD)
+    description = CharField(**OPT_STR_FIELD)
+    level = CharField(**OPT_STR_FIELD)
     ip_address = CharField(**OPT_STR_FIELD)
 
     def pre_process(self, data: dict) -> None:
-        # For now, assume user
-        data["content_type"] = ContentType.objects.get(app_label="core", model="account")
+        # Map log level
+        data["level"] = self.Meta.log_level_map.get(data.get("level")) or "Info"
+
+        # Map article
+        data["object_id"] = self.article_id
+
+    def post_process(self, log_entry: LogEntry, data: dict) -> None:
+        # Set content type to article
+        log_entry.content_type = ContentType.objects.get(app_label="submission", model="article")
+        # Override #date's auto_now_add
+        log_entry.date = data["date"]
+        log_entry.save()
 
 
 class JournalArticleRevisionRequestSerializer(TransporterSerializer):
