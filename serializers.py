@@ -1265,7 +1265,8 @@ class JournalArticleRoundAssignmentResponseSerializer(TransporterSerializer):
         field_map = {
             "source_record_key": None,
             "response_value": "answer",
-            "review_form_element_id": "original_element_id"
+            "review_form_element_id": "original_element_id",
+            "visible_to_author": "author_can_see"
         }
         foreign_keys = {
             "review_form_element": "review_form_element_id"
