@@ -785,8 +785,16 @@ class JournalArticleSerializer(TransporterSerializer):
             else:
                 data["stage"] = "Unsubmitted"
 
-        # If date_started is blank, use date_submitted (else defaults today)
-        if not data.get("date_started"): data["date_started"] = data["date_submitted"]
+        # Ensure as many dates as possible are extrapolated to prevent defaulting to day of import
+        # Default to 1/1/1900 if no date found (hopefully serves as an obvious unknown value)
+        last_date = datetime(1900, 1, 1)
+        for field_name in self.Meta.fields:
+            if not field_name.startswith("date_"): continue
+
+            if data.get(field_name):
+                last_date = data[field_name]
+            else:
+                data[field_name] = last_date + timedelta(seconds=1)
 
     def post_process(self, model, data):
         # Assign issues (M2M)
