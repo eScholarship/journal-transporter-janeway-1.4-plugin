@@ -13,7 +13,7 @@ from rest_framework.serializers import (ModelSerializer, SerializerMethodField, 
                                         SlugRelatedField, BooleanField, ListField)
 
 from journal.models import Journal, Issue, IssueType
-from submission.models import Article, Field, FieldAnswer, FrozenAuthor, Section
+from submission.models import Article, Field, FieldAnswer, FrozenAuthor, Keyword, KeywordArticle, Section
 from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment,
                            ReviewAssignmentAnswer, ReviewerRating, EditorAssignment,
                            RevisionRequest)
@@ -801,6 +801,16 @@ class JournalArticleSerializer(TransporterSerializer):
 
         # Assign custom field values
         self.assign_custom_field_values(model)
+
+        # Assign Keywords
+        keywords = self.initial_data.get("keywords")
+        if keywords:
+            self.assign_keywords(model, keywords)
+
+        # Assign DOI
+        doi = self.initial_data.get("doi")
+        if doi:
+            Identifier.objects.create(id_type="doi", identifier=doi, article=model)
 
         # Create import log entry
         external_ids = init_data.get("external_ids", "None")
