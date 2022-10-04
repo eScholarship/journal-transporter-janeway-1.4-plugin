@@ -20,6 +20,7 @@ from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAss
 from core.models import Account, AccountRole, Country, File, Galley, Role, WorkflowElement, \
     WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES
 from utils.models import LogEntry
+from identifiers.models import Identifier
 from core import files
 
 
@@ -846,6 +847,13 @@ class JournalArticleSerializer(TransporterSerializer):
                 field = Field.objects.filter(journal=article.journal, name=field_name).first()
                 if field:
                     FieldAnswer.objects.create(field=field, article=article, answer=answer)
+
+    def assign_keywords(self, article: Article, keywords: list) -> None:
+        if not keywords: return
+
+        for index, keyword in enumerate(keywords):
+            keyword_record, _created = Keyword.objects.get_or_create(word=keyword)
+            KeywordArticle.objects.create(article=article, keyword=keyword_record, order=(index + 1))
 
 
 class JournalArticleEditorSerializer(TransporterSerializer):
