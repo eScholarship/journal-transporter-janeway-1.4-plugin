@@ -861,7 +861,7 @@ class JournalArticleSerializer(TransporterSerializer):
 
         for index, keyword in enumerate(keywords):
             keyword_record, _created = Keyword.objects.get_or_create(word=keyword)
-            KeywordArticle.objects.create(article=article, keyword=keyword_record, order=(index + 1))
+            KeywordArticle.objects.get_or_create(article=article, keyword=keyword_record, order=(index + 1))
 
 
 class JournalArticleEditorSerializer(TransporterSerializer):
