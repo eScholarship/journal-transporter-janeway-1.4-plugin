@@ -3,8 +3,13 @@ import json
 from django.http import QueryDict
 from rest_framework import parsers
 
-class MultiPartJSONParser(parsers.MultiPartParser):
 
+class MultiPartJSONParser(parsers.MultiPartParser):
+    """
+    Parses a multipart request with stringified JSON passed as "json".
+
+    Any other data is overwritten with the parsed JSON.
+    """
     def parse(self, stream, media_type=None, parser_context=None):
         result = super().parse(
             stream,
