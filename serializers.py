@@ -234,6 +234,17 @@ class TransporterSerializer(ModelSerializer):
                     setattr(self, fk_record_name, found)
                     data["{0}_id".format(fk_record_name)] = found.pk
 
+    def handle_attachments(self, object, initial_data: dict) -> None:
+        if hasattr(self.Meta, "attachments"):
+            for key, attachment_name in self.Meta.attachments.items():
+                metadata = initial_data.get(key)
+                file = initial_data.get("{0}_file".format(key))
+
+                if file:
+                    setattr(object, attachment_name, file)
+
+            object.save()
+
     ############
     # Callbacks
     ############
@@ -382,6 +393,10 @@ class JournalSerializer(TransporterSerializer):
             "issn",
             "print_issn"
         )
+        attachments = {
+            "header_file": "header_image",
+            "cover_file": "default_cover_image"
+        }
 
     path = CharField(source="code")
     title = CharField(source="name")
@@ -635,6 +650,9 @@ class JournalIssueSerializer(TransporterSerializer):
             "title": "Untitled Issue",
             "date_published": str(timezone.now() + timedelta(days=(365 * 50)))
         }
+        attachments = {
+            "cover_file": "cover_image"
+        }
 
     title = CharField(source="issue_title", **OPT_STR_FIELD)
     volume = IntegerField(default=1, **OPT_FIELD)
@@ -656,6 +674,11 @@ class JournalIssueSerializer(TransporterSerializer):
 
         # Add to end of issue order, by default
         self.apply_default_value(data, "order", len(self.journal.issues))
+
+    def post_process(self, issue: Issue, data: dict) -> None:
+        if data.get("cover_file_file"):
+            issue.cover_image = data.get("cover_file_file")
+            issue.save()
 
 
 class JournalSectionSerializer(TransporterSerializer):
@@ -741,7 +764,7 @@ class JournalArticleSerializer(TransporterSerializer):
         if not data.get("title"):
             data["title"] = "Untitled Article"
 
-        if data.get("sections") and data["sections"][0] and data["sections"][0]["target_record_key"]:
+        if data.get("sections") and data["sections"][0] and data["sections"][0].get("target_record_key"):
             data["section_id"] = data["sections"][0]["target_record_key"].split(":")[-1]
 
     def pre_process(self, data: dict) -> None:
@@ -943,6 +966,9 @@ class JournalArticleFileSerializer(TransporterSerializer):
 
     def create(self, validated_data: dict) -> Model:
         self.article = self.get_article()
+
+        self.pre_process(validated_data)
+
         raw_file = validated_data.pop("file")
 
         # If the file has a parent, then it belongs in the file history
@@ -967,6 +993,7 @@ class JournalArticleFileSerializer(TransporterSerializer):
                                               is_galley=(validated_data.get("is_galley") or False)
                                               )
 
+        self.post_process(file, validated_data)
         return file
 
     def post_process(self, record: File, data: dict):
