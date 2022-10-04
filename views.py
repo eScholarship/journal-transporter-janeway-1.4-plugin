@@ -1,6 +1,7 @@
 from django.http import HttpResponse, Http404
 
 from rest_framework import viewsets, parsers
+from plugins.journal_transporter.parsers import MultiPartJSONParser
 
 from plugins.journal_transporter import serializers
 
@@ -55,7 +56,7 @@ def manager(request):
 
 class TransporterViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     http_method_names = ['get', 'post']
-    parser_classes = [parsers.JSONParser, parsers.MultiPartParser]
+    parser_classes = [parsers.JSONParser, MultiPartJSONParser]
 
     def delete(self, _request, *_args, **_kwargs):
         """Deleting resources through this plugin is not allowed."""
@@ -122,7 +123,6 @@ class JournalArticleFileViewSet(TransporterViewSet):
     queryset = File.objects.all()
     serializer_class = serializers.JournalArticleFileSerializer
     parent_keys = ["article_id"]
-    parser_classes = [parsers.MultiPartParser]
 
     def retrieve(self, request, *args, **kwargs):
         article = Article.objects.get(pk=kwargs["parent_lookup_article_id"])
