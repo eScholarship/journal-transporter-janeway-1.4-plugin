@@ -1,3 +1,6 @@
+import json
+import textwrap
+
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 
@@ -773,6 +776,20 @@ class JournalArticleSerializer(TransporterSerializer):
 
         # Assign custom field values
         self.assign_custom_field_values(model)
+
+        # Create import log entry
+        external_ids = init_data.get("external_ids", "None")
+
+        LogEntry.objects.create(
+            level="Info",
+            object_id=model.id,
+            content_type=ContentType.objects.get(app_label="submission", model="article"),
+            subject="Import",
+            description=(textwrap.dedent("""\
+                         Article {article_id} imported by Journal Transporter.
+                         External identifiers:
+                         {extids}""".format(article_id=model.id, extids=json.dumps(external_ids))))
+        )
 
     def assign_custom_field_values(self, article: Article) -> None:
         """
