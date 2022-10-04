@@ -861,6 +861,8 @@ class JournalArticleSerializer(TransporterSerializer):
 
         for index, keyword in enumerate(keywords):
             if keyword:
+                # Keywords are capped at 200 chars. If longer, indicate this with an ellipsis
+                keyword = (keyword[:198] + "..") if len(keyword) > 200 else keyword
                 keyword_record, _created = Keyword.objects.get_or_create(word=keyword)
                 KeywordArticle.objects.get_or_create(
                     article=article,
