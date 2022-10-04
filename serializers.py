@@ -860,8 +860,13 @@ class JournalArticleSerializer(TransporterSerializer):
         if not keywords: return
 
         for index, keyword in enumerate(keywords):
-            keyword_record, _created = Keyword.objects.get_or_create(word=keyword)
-            KeywordArticle.objects.get_or_create(article=article, keyword=keyword_record, order=(index + 1))
+            if keyword:
+                keyword_record, _created = Keyword.objects.get_or_create(word=keyword)
+                KeywordArticle.objects.get_or_create(
+                    article=article,
+                    keyword=keyword_record,
+                    defaults={"order": (index + 1)}
+                )
 
 
 class JournalArticleEditorSerializer(TransporterSerializer):
