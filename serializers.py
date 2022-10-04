@@ -116,6 +116,7 @@ class TransporterSerializer(ModelSerializer):
             if value: setattr(instance, key, value)
         instance.save()
 
+        self.handle_attachments(instance)
         self.post_process(instance, data)
 
         return instance
@@ -234,13 +235,14 @@ class TransporterSerializer(ModelSerializer):
                     setattr(self, fk_record_name, found)
                     data["{0}_id".format(fk_record_name)] = found.pk
 
-    def handle_attachments(self, object, initial_data: dict) -> None:
+    def handle_attachments(self, object) -> None:
         if hasattr(self.Meta, "attachments"):
             for key, attachment_name in self.Meta.attachments.items():
-                metadata = initial_data.get(key)
-                file = initial_data.get("{0}_file".format(key))
+                metadata = self.initial_data.get(key)
+                file = self.initial_data.get("{0}_file".format(key))
 
                 if file:
+                    file.name = metadata.get("name") or metadata.get("upload_name")
                     setattr(object, attachment_name, file)
 
             object.save()
