@@ -861,7 +861,7 @@ class JournalArticleSerializer(TransporterSerializer):
 
         for index, keyword in enumerate(keywords):
             if keyword:
-                # Keywords are capped at 200 chars. If longer, indicate this with an ellipsis
+                # Keywords are capped at 200 chars. If longer, indicate the truncation with an ellipsis
                 keyword = (keyword[:198] + "..") if len(keyword) > 200 else keyword
                 keyword_record, _created = Keyword.objects.get_or_create(word=keyword)
                 KeywordArticle.objects.get_or_create(
@@ -1016,15 +1016,9 @@ class JournalArticleFileSerializer(TransporterSerializer):
                 # TODO: Is this the best way to do this? Is "overwriting" correct?
                 file = files.overwrite_file(raw_file, replaced_file, (self.article, self.article.pk))
         else:
-            # TEST - this needs to become a real user reference
-            if hasattr(self.context["view"].request, "user"):
-                user = self.context["view"].request.user
-            else:
-                Account.objects.all()[0]
-
             file = files.save_file_to_article(raw_file,
                                               self.article,
-                                              user,
+                                              None,
                                               validated_data.get("label") or validated_data.get("original_filename"),
                                               description=validated_data.get("description"),
                                               is_galley=(validated_data.get("is_galley") or False)
