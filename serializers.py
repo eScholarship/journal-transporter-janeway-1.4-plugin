@@ -983,6 +983,7 @@ class JournalArticleFileSerializer(TransporterSerializer):
         field_map = {
             "source_record_key": None,
             "file": None,
+            "date_uploaded": "date_uploaded",
             "description": "description",
             "label": "label",
             "original_filename": "original_filename",
@@ -992,6 +993,7 @@ class JournalArticleFileSerializer(TransporterSerializer):
         fields = tuple(field_map.keys())
 
     file = FileField(write_only=True, use_url=False, allow_empty_file=True)
+    date_uploaded = DateTimeField(**OPT_FIELD)
     description = CharField(**OPT_STR_FIELD)
     label = CharField(**OPT_STR_FIELD)
     original_filename = CharField(max_length=1000, **OPT_STR_FIELD)
@@ -1039,6 +1041,11 @@ class JournalArticleFileSerializer(TransporterSerializer):
             self.article.supplementary_files.add(record)
         elif not data.get("parent_target_record_key"):
             self.article.manuscript_files.add(record)
+
+        if data.get("date_uploaded"):
+            record.date_uploaded = data.get("date_uploaded")
+
+        record.save()
 
     def get_article(self) -> Article:
         # The File model's article reference is not a foreign key, so regular parent
