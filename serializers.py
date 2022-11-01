@@ -579,6 +579,8 @@ class JournalRoleSerializer(TransporterSerializer):
 
     If a role is not found, this will fail and return 400. That is intentional and expected behavior for an unmapped
     role.
+
+    If a role maps to None, it will return 200 to avoid an error, but no role will be created.
     """
     class Meta:
         model = AccountRole
@@ -601,11 +603,12 @@ class JournalRoleSerializer(TransporterSerializer):
             "proofreader": "Proofreader",
             "reviewer": "Reviewer",
             "section_editor": "Section Editor",
-            "typesetter": "Typesetter"
+            "typesetter": "Typesetter",
+            "reader": None
         }
 
     user_id = IntegerField()
-    role_id = IntegerField()
+    role_id = IntegerField(**OPT_FIELD)
     role = CharField(read_only=True)
 
     def before_validation(self, data: dict):
@@ -615,6 +618,10 @@ class JournalRoleSerializer(TransporterSerializer):
             data["role_id"] = role.pk
 
     def create(self, data: dict) -> Role:
+        # If the role maps to None, we want to return 200 but not actually create the role
+        if data.get("role_id") is None:
+            return AccountRole(**data)
+            
         # If AccountRole already exists, we can't create a new one, so just return the existing
         return super().create(data, upsert=True)
 
