@@ -621,7 +621,7 @@ class JournalRoleSerializer(TransporterSerializer):
         # If the role maps to None, we want to return 200 but not actually create the role
         if data.get("role_id") is None:
             return AccountRole(**data)
-            
+
         # If AccountRole already exists, we can't create a new one, so just return the existing
         return super().create(data, upsert=True)
 
@@ -939,6 +939,9 @@ class JournalArticleAuthorSerializer(UserSerializer):
         defaults = {
             "department": "None"
         }
+        foreign_keys = {
+            "user": "user_id"
+        }
         fields = tuple(field_map.keys())
 
     email = EmailField(source="frozen_email", **OPT_STR_FIELD)
@@ -953,6 +956,8 @@ class JournalArticleAuthorSerializer(UserSerializer):
     signature = CharField(**OPT_STR_FIELD)
     primary_contact = SerializerMethodField()
 
+    user_id = IntegerField(source="author_id", **OPT_FIELD)
+
     def create(self, validated_data: dict) -> FrozenAuthor:
         viewset = self.context['view']
         kwargs = viewset.get_parents_query_dict()
@@ -965,14 +970,12 @@ class JournalArticleAuthorSerializer(UserSerializer):
         return frozen_author
 
     def post_process(self, record: FrozenAuthor, data: dict):
-        if record.frozen_email:
-            user = Account.objects.filter(email=record.frozen_email).first()
-            if user:
-                self.article.authors.add(user)
-                # Primary contact is not a model attr, so look it up in the initial (unvalidated) data.
-                if self.initial_data.get("primary_contact"):
-                    self.article.correspondence_author = user
-                self.article.save()
+        if record.author:
+            self.article.authors.add(record.author)
+            # Primary contact is not a model attr, so look it up in the initial (unvalidated) data.
+            if self.initial_data.get("primary_contact"):
+                self.article.correspondence_author = record.author
+            self.article.save()
 
     def get_primary_contact(self, record: FrozenAuthor):
         return record.is_correspondence_author
