@@ -890,6 +890,26 @@ class JournalArticleSerializer(TransporterSerializer):
                     defaults={"order": (index + 1)}
                 )
 
+    def create_import_log_entry(self, article: Article) -> LogEntry:
+        """Creates a log entry for this article containing import metadata."""
+        content = {
+            "imported_at": str(datetime.now()),
+            "external_identifiers": self.initial_data.get("external_ids", "None"),
+            "journal_transporter_article_uuid": self.initial_data.get("uuid")
+        }
+
+        LogEntry.objects.create(
+            level="Info",
+            object_id=article.id,
+            content_type=ContentType.objects.get(app_label="submission", model="article"),
+            subject="Import",
+            description=(textwrap.dedent("""\
+                         Article {article_id} imported by Journal Transporter.
+
+                         Import metadata:
+                         {content}""".format(article_id=article.id, content=json.dumps(content))))
+        )
+
 
 class JournalArticleEditorSerializer(TransporterSerializer):
     """
