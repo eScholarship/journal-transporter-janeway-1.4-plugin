@@ -807,11 +807,24 @@ class JournalArticleSerializer(TransporterSerializer):
         # Assign issues (M2M)
         init_data = self.initial_data
         if init_data.get("issues") and isinstance(init_data["issues"], list):
-            issues = list(map(lambda j: j["target_record_key"].split(":")[-1], init_data["issues"]))
+            issues = self.initial_data.get("issues")
 
-            for issue_pk in issues:
-                model.issues.add(Issue.objects.get(pk=issue_pk))
-                if not model.projected_issue: model.projected_issue_id = issue_pk
+            for issue_dict in issues:
+                pk = issue_dict.get("target_record_key").split(":")[-1]
+                issue = Issue.objects.get(pk=pk)
+                model.issues.add(issue)
+                if not model.projected_issue: model.projected_issue_id = pk
+
+                # Issue ordering
+                # Sequence is not stored on the article, but in a separate model
+                # so extract from the issue dict or article initial_data
+                seq = issue_dict.get("sequence") or self.initial_data.get("sequence")
+                if seq:
+                    ArticleOrdering.objects.get_or_create(article=model,
+                                                          issue=issue,
+                                                          section=model.section,
+                                                          defaults={"order": seq}
+                                                          )
 
             model.save()
 
