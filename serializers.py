@@ -408,9 +408,6 @@ class JournalSerializer(TransporterSerializer):
     online_issn = CharField(source="issn", **OPT_STR_FIELD)
     print_issn = CharField(**OPT_STR_FIELD)
 
-    def pre_process(self, data: dict) -> None:
-        self.apply_default_value(data, "domain", "https://example.com/{0}".format(data["code"]))
-
     def post_process(self, journal: Journal, data: dict) -> None:
         # TODO - Need to look into importing article images if they exist
         journal.disable_article_images = True
@@ -784,7 +781,7 @@ class JournalArticleSerializer(TransporterSerializer):
             data["section_id"] = Section.objects.get_or_create(journal=self.journal, name="Articles")[0].pk
 
         # Apply mapped stage
-        data["stage"] = self.Meta.stage_map.get(data["stage"])
+        data["stage"] = self.Meta.stage_map.get(data.get("stage"))
         if not data.get("stage"):
             if data.get("date_published"):
                 data["stage"] = "Published"
@@ -842,19 +839,7 @@ class JournalArticleSerializer(TransporterSerializer):
         if doi:
             Identifier.objects.create(id_type="doi", identifier=doi, article=model)
 
-        # Create import log entry
-        external_ids = init_data.get("external_ids", "None")
-
-        LogEntry.objects.create(
-            level="Info",
-            object_id=model.id,
-            content_type=ContentType.objects.get(app_label="submission", model="article"),
-            subject="Import",
-            description=(textwrap.dedent("""\
-                         Article {article_id} imported by Journal Transporter.
-                         External identifiers:
-                         {extids}""".format(article_id=model.id, extids=json.dumps(external_ids))))
-        )
+        self.create_import_log_entry(model)
 
     def assign_custom_field_values(self, article: Article) -> None:
         """
@@ -1081,14 +1066,17 @@ class JournalArticleFileSerializer(TransporterSerializer):
         return file
 
     def post_process(self, record: File, data: dict):
+        # Create a galley, if file is a galley
         if data.get("is_galley"):
             Galley.objects.create(article=self.article, file=record)
 
+        # Add file to appropriate collection
         if data.get("is_supplementary_file"):
             self.article.supplementary_files.add(record)
         elif not data.get("parent_target_record_key"):
             self.article.manuscript_files.add(record)
 
+        # Overwrite hardcoded default upload date of today
         if data.get("date_uploaded"):
             record.date_uploaded = data.get("date_uploaded")
 
