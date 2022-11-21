@@ -947,7 +947,8 @@ class JournalArticleAuthorSerializer(UserSerializer):
             "salutation": "name_prefix",
             "country_code": "country",
             "order": "order",
-            "primary_contact": None
+            "primary_contact": None,
+            "user_id": "author_id"
         }
         defaults = {
             "department": "None"
