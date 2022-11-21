@@ -986,6 +986,14 @@ class JournalArticleAuthorSerializer(UserSerializer):
     def post_process(self, record: FrozenAuthor, data: dict):
         if record.author:
             self.article.authors.add(record.author)
+
+            # Set order
+            ArticleAuthorOrder.objects.create(
+                article=self.article,
+                author=record.author,
+                order=self.initial_data.get("sequence", self.article.authors.count() + 1)
+            )
+
             # Primary contact is not a model attr, so look it up in the initial (unvalidated) data.
             if self.initial_data.get("primary_contact"):
                 self.article.correspondence_author = record.author
