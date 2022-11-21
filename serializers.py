@@ -12,8 +12,9 @@ from rest_framework.serializers import (ModelSerializer, SerializerMethodField, 
                                         IntegerField, DateTimeField, EmailField, FileField,
                                         SlugRelatedField, BooleanField, ListField)
 
-from journal.models import Journal, Issue, IssueType
-from submission.models import Article, Field, FieldAnswer, FrozenAuthor, Keyword, KeywordArticle, Section
+from journal.models import ArticleOrdering, Issue, IssueType, Journal
+from submission.models import (Article, ArticleAuthorOrder, Field, FieldAnswer, FrozenAuthor,
+                               Keyword, KeywordArticle, Section)
 from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment,
                            ReviewAssignmentAnswer, ReviewerRating, EditorAssignment,
                            RevisionRequest)
