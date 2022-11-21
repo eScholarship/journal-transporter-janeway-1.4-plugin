@@ -818,11 +818,12 @@ class JournalArticleSerializer(TransporterSerializer):
                 # so extract from the issue dict or article initial_data
                 seq = issue_dict.get("sequence") or self.initial_data.get("sequence")
                 if seq:
-                    ArticleOrdering.objects.get_or_create(article=model,
-                                                          issue=issue,
-                                                          section=model.section,
-                                                          defaults={"order": seq}
-                                                          )
+                    ordering, _ = ArticleOrdering.objects.get_or_create(article=model,
+                                                                        issue=issue,
+                                                                        section=model.section,
+                                                                        defaults={"order": seq}
+                                                                        )
+                    ordering.save()
 
             model.save()
 
