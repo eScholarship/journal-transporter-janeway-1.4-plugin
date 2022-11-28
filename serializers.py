@@ -1170,7 +1170,17 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
             "article": "article_id",
             "editor": "editor_id"
         }
+        # Types that map to None will not generate a revision request record, but will return 200,
+        # as they are expected possible values.
         type_map = {
+            "accepted": None,
+            "accept": None,
+            "reject": None,
+            "rejected": None,
+            "declined": None,
+            "decline": None,
+            "major_revisions": "major_revisions",
+            "minor_revisions": "minor_revisions",
             "revisions": "minor_revisions"
         }
 
@@ -1184,8 +1194,20 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
     date_completed = DateTimeField(**OPT_FIELD)
 
     def pre_process(self, data: dict) -> None:
-        data["type"] = self.Meta.type_map.get(data.get("type")) or "minor_revisions"
         self.apply_default_value(data, "date_due", data.get("date_requested") + timedelta(days=30))
+
+    def create(self, data: dict) -> RevisionRequest:
+        self.pre_process(data)
+
+        mapped_type = self.Meta.type_map.get(data.get("type"))
+        # If we've accounted for the type, but it maps to None, don't create anything.
+        # Janeway does not create RevisionRequests for accept/decline, but some other systems do.
+
+        if data["type"] in self.Meta.type_map and mapped_type is None:
+            return RevisionRequest()
+        else:
+            data["type"] = mapped_type
+            return super().create(data)
 
 
 class JournalArticleRoundSerializer(TransporterSerializer):
