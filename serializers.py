@@ -72,7 +72,10 @@ class TransporterSerializer(ModelSerializer):
 
     def get_source_record_key(self, obj: Model) -> str:
         """Builds a source record key from model class name and model PK."""
-        return "{0}:{1}".format(obj.__class__.__name__, obj.pk)
+        if obj.pk:
+            return "{0}:{1}".format(obj.__class__.__name__, obj.pk)
+        else:
+            return None
 
     def is_valid(self, raise_exception=False):
         """
