@@ -13,6 +13,7 @@ from rest_framework.serializers import (ModelSerializer, SerializerMethodField, 
                                         SlugRelatedField, BooleanField, ListField)
 
 from journal.models import ArticleOrdering, Issue, IssueType, Journal
+from submission import models as submission_models
 from submission.models import (Article, ArticleAuthorOrder, Field, FieldAnswer, FrozenAuthor,
                                Keyword, KeywordArticle, Section)
 from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment,
@@ -741,17 +742,20 @@ class JournalArticleSerializer(TransporterSerializer):
         }
         fields = tuple(field_map.keys())
         stage_map = {
-            "draft": "Unsubmitted",
-            "submitted": "Unassigned",
-            "assigned": "Assigned to Editor",
-            "review": "Peer Review",
-            "revision": "Revision",
-            "rejected": "Rejected",
-            "accepted": "Accepted",
-            "copyediting": "Editor Copyediting",
-            "typesetting": "Typesetting",
-            "proofing": "Proofing",
-            "published": "Published"
+            "draft": submission_models.STAGE_UNSUBMITTED,
+            "submitted": submission_models.STAGE_UNASSIGNED,
+            "assigned": submission_models.STAGE_ASSIGNED,
+            "review": submission_models.STAGE_UNDER_REVIEW,
+            "revision": submission_models.STAGE_UNDER_REVISION,
+            "revise": submission_models.STAGE_UNDER_REVISION,
+            "rejected": submission_models.STAGE_REJECTED,
+            "accepted": submission_models.STAGE_ACCEPTED,
+            "copyediting": submission_models.STAGE_EDITOR_COPYEDITING,
+            "editor_copyediting": submission_models.STAGE_EDITOR_COPYEDITING,
+            "author_copyediting": submission_models.STAGE_AUTHOR_COPYEDITING,
+            "typesetting": submission_models.STAGE_TYPESETTING,
+            "proofing": submission_models.STAGE_PROOFING,
+            "published": submission_models.STAGE_PUBLISHED
         }
         custom_fields = [
             "acknowledgements"
