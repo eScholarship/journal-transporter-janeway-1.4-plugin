@@ -940,7 +940,7 @@ class JournalArticleEditorSerializer(TransporterSerializer):
     editor_id = IntegerField()
 
     def pre_process(self, data: dict):
-        data["notified"] = bool(data.get("date_notified"))
+        data["notified"] = bool(data.get("assigned"))
         data["assigned"] = data.get("assigned") or self.article.date_submitted or datetime.now()
         if not data.get("editor_type"):
             role = Role.objects.filter(slug="editor")
