@@ -1314,6 +1314,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
     responded = BooleanField(source="is_complete", **OPT_FIELD)
     comments = CharField(source="comments_for_editor", **OPT_STR_FIELD)
     has_response = BooleanField(source="is_complete", **OPT_FIELD)
+    date_assigned = DateTimeField(source="date_requested", **OPT_FIELD)
     date_due = DateTimeField()
     date_confirmed = DateTimeField(source="date_accepted", **OPT_FIELD)
     date_declined = DateTimeField(**OPT_FIELD)
