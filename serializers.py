@@ -1266,7 +1266,8 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         foreign_keys = {
             "reviewer": "reviewer_id",
             "editor": "editor_id",
-            "review_file": "review_file_id",
+            "review_file": "round_review_file_id",  # `review_file` in the payload is one round `review_file`
+            "reviewer_file": "review_file_id",  # `reviewer_file` in the payload is the assignment `review_file`
             "review_form": "review_form_id"
         }
         field_map = {
@@ -1341,8 +1342,11 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         if quality and record.editor:
             ReviewerRating.objects.create(assignment=record, rater=record.editor, rating=(quality * 10))
 
-        if record.review_file and not record.review_round.review_files.filter(pk=record.review_file.pk).exists():
-            record.review_round.review_files.add(record.review_file)
+        round_review_file_id = self.initial_data.get("round_review_file_id")
+        if round_review_file_id:
+            if not record.review_round.review_files.filter(pk=round_review_file_id).exists():
+                file = File.objects.get(pk=round_review_file_id)
+                record.review_round.review_files.add(file)
 
 
 class JournalArticleRoundAssignmentResponseSerializer(TransporterSerializer):
