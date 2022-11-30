@@ -436,23 +436,12 @@ class JournalSerializer(TransporterSerializer):
         # Acknowledgements
         Field.objects.create(press=journal.press,
                              journal=journal,
-                             name="acknowledgements",
+                             name="Acknowledgements",
                              kind="textarea",
                              required=False,
                              display=True,
                              order=0,
-                             help_text="Ackowledgements"
-                             )
-
-        # Object Identifiers (other than those contained on the Article, i.e. DOI)
-        Field.objects.create(press=journal.press,
-                             journal=journal,
-                             name="external_identifiers",
-                             kind="text",
-                             required=False,
-                             display=False,
-                             order=0,
-                             help_text="External identifiers"
+                             help_text="Acknowledgements"
                              )
 
 
@@ -758,7 +747,7 @@ class JournalArticleSerializer(TransporterSerializer):
             "published": submission_models.STAGE_PUBLISHED
         }
         custom_fields = [
-            "acknowledgements"
+            "Acknowledgements"
         ]
 
     title = CharField(**OPT_STR_FIELD)
