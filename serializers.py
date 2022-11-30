@@ -1205,9 +1205,11 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
             "rejected": None,
             "declined": None,
             "decline": None,
+            "resubmit": None,
             "major_revisions": "major_revisions",
             "minor_revisions": "minor_revisions",
-            "revisions": "minor_revisions"
+            "revisions": "minor_revisions",
+            "revise": "minor_revisions"
         }
 
     decision = CharField(source="type")
