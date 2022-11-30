@@ -213,7 +213,7 @@ class TransporterSerializer(ModelSerializer):
             if key in data: ret[key] = data.pop(key)
         return ret
 
-    def apply_parent_id(self, data) -> None:
+    def apply_parent_id(self, data: dict) -> None:
         """
         Finds and attempts to apply foreign key PK values to a record based on URL nesting.
 
@@ -541,12 +541,13 @@ class JournalReviewFormElementSerializer(TransporterSerializer):
         question = data.get("name")
         help_text = data.get("help_text", "")
 
-        # Don't assume char limit is alwasy 200 - look it up
+        # Don't assume char limit is always 200 - look it up
         name_field = next(x for x in ReviewFormElement._meta.fields if x.attname == "name")
         max_length = name_field.max_length
 
         # If question length < max length, there's nothing to do here.
-        if len(question) <= max_length or not max_length: return
+        if len(question) <= max_length or not max_length:
+            return
 
         # Otherwise, find the last sentence terminator before max length
         substr = question[0:max_length]
@@ -724,7 +725,7 @@ class JournalArticleSerializer(TransporterSerializer):
             "cover_letter": "comments_editor"
         }
         defaults = {
-            "title": "Unknown Article"
+            "title": "Untitled Article"
         }
         foreign_keys = {
             "sections": "section_id"
@@ -761,15 +762,8 @@ class JournalArticleSerializer(TransporterSerializer):
     date_published = DateTimeField(required=False, allow_null=True)
     date_updated = DateTimeField(required=False, allow_null=True)
     status = CharField(source="stage", default="draft", **OPT_STR_FIELD)
+
     section_id = IntegerField(required=False, allow_null=True)
-
-    def before_validation(self, data: dict) -> None:
-        # Title is required
-        if not data.get("title"):
-            data["title"] = "Untitled Article"
-
-        if data.get("sections") and data["sections"][0] and data["sections"][0].get("target_record_key"):
-            data["section_id"] = data["sections"][0]["target_record_key"].split(":")[-1]
 
     def pre_process(self, data: dict) -> None:
         # Assign a default section if not otherwise defined.
@@ -778,6 +772,8 @@ class JournalArticleSerializer(TransporterSerializer):
 
         # Apply mapped stage
         data["stage"] = self.Meta.stage_map.get(data.get("stage"))
+        # If stage didn't map to something sensical, try to derive
+        # This may need to be updated later (i.e. review)
         if not data.get("stage"):
             if data.get("date_published"):
                 data["stage"] = "Published"
@@ -797,7 +793,7 @@ class JournalArticleSerializer(TransporterSerializer):
             else:
                 data[field_name] = last_date + timedelta(seconds=1)
 
-    def post_process(self, model, data):
+    def post_process(self, article: Article, data: dict) -> Article:
         # Assign issues (M2M)
         init_data = self.initial_data
         if init_data.get("issues") and isinstance(init_data["issues"], list):
@@ -806,30 +802,30 @@ class JournalArticleSerializer(TransporterSerializer):
             for issue_dict in issues:
                 pk = issue_dict.get("target_record_key").split(":")[-1]
                 issue = Issue.objects.get(pk=pk)
-                model.issues.add(issue)
-                if not model.projected_issue: model.projected_issue_id = pk
+                article.issues.add(issue)
+                if not article.projected_issue: article.projected_issue_id = pk
 
                 # Issue ordering
                 # Sequence is not stored on the article, but in a separate model
                 # so extract from the issue dict or article initial_data
                 seq = issue_dict.get("sequence") or self.initial_data.get("sequence")
                 if seq:
-                    ordering, _ = ArticleOrdering.objects.get_or_create(article=model,
+                    ordering, _ = ArticleOrdering.objects.get_or_create(article=article,
                                                                         issue=issue,
-                                                                        section=model.section,
+                                                                        section=article.section,
                                                                         defaults={"order": seq}
                                                                         )
                     ordering.save()
 
-            model.save()
+            article.save()
 
         # Assign custom field values
-        self.assign_custom_field_values(model)
+        self.assign_custom_field_values(article)
 
         # Assign Keywords
         keywords = self.initial_data.get("keywords")
         if keywords:
-            self.assign_keywords(model, keywords)
+            self.assign_keywords(article, keywords)
 
         # Assign DOI
         doi = self.initial_data.get("doi")
@@ -852,7 +848,6 @@ class JournalArticleSerializer(TransporterSerializer):
                 default=license_dict
             )
 
-        self.create_import_log_entry(model)
         # Create initial workflow entry
         if not article.stage == submission_models.STAGE_UNSUBMITTED:
             workflow_element = WorkflowElement.objects.get(journal_id=self.journal_id, element_name="review")
@@ -1148,13 +1143,13 @@ class JournalArticleLogEntrySerializer(TransporterSerializer):
             "fatal": "Error"
         }
 
-    user = IntegerField(source="actor_id", **OPT_FIELD)
-
     date = DateTimeField()
     title = CharField(source="subject", **OPT_STR_FIELD)
     description = CharField(**OPT_STR_FIELD)
     level = CharField(**OPT_STR_FIELD)
     ip_address = CharField(**OPT_STR_FIELD)
+
+    user = IntegerField(source="actor_id", **OPT_FIELD)
 
     def pre_process(self, data: dict) -> None:
         # Map log level
@@ -1191,7 +1186,6 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
         }
         fields = tuple(field_map.keys())
         foreign_keys = {
-            "article": "article_id",
             "editor": "editor_id"
         }
         # Types that map to None will not generate a revision request record, but will return 200,
@@ -1208,14 +1202,14 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
             "revisions": "minor_revisions"
         }
 
-    editor_id = IntegerField()
-
     decision = CharField(source="type")
     comment = CharField(source="editor_note", default="None", **OPT_STR_FIELD)
     author_comment = CharField(source="author_note", **OPT_STR_FIELD)
     date = DateTimeField(source="date_requested", **OPT_FIELD)
     date_due = DateTimeField(**OPT_FIELD)
     date_completed = DateTimeField(**OPT_FIELD)
+
+    editor_id = IntegerField()
 
     def pre_process(self, data: dict) -> None:
         self.apply_default_value(data, "date_due", data.get("date_requested") + timedelta(days=30))
