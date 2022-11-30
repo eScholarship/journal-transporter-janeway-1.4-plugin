@@ -1280,7 +1280,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         field_map = {
             "source_record_key": None,
             "recommendation": "decision",
-            "date_requested": "date_assigned",
+            "date_assigned": "date_requested",
             "date_due": "date_due",
             "date_confirmed": "date_accepted",
             "date_declined": "date_declined",
