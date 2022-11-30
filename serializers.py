@@ -853,6 +853,14 @@ class JournalArticleSerializer(TransporterSerializer):
             )
 
         self.create_import_log_entry(model)
+        # Create initial workflow entry
+        if not article.stage == submission_models.STAGE_UNSUBMITTED:
+            workflow_element = WorkflowElement.objects.get(journal_id=self.journal_id, element_name="review")
+            existing = WorkflowLog.objects.filter(article=article, element=workflow_element)
+            if not existing:
+                WorkflowLog.objects.create(article=article,
+                                           element=workflow_element,
+                                           timestamp=article.date_submitted)
 
     def assign_custom_field_values(self, article: Article) -> None:
         """
@@ -1245,13 +1253,6 @@ class JournalArticleRoundSerializer(TransporterSerializer):
     date = DateTimeField(source="date_started", **OPT_FIELD)
 
     def post_process(self, record: ReviewRound, data: dict):
-        if record.round_number == 1:
-            workflow_element = WorkflowElement.objects.get(journal_id=self.journal_id, element_name="review")
-            existing = WorkflowLog.objects.filter(article=record.article, element=workflow_element)
-            if not existing:
-                WorkflowLog.objects.create(article=record.article,
-                                           element=workflow_element,
-                                           timestamp=record.date_started)
 
 
 class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
