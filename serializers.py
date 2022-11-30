@@ -931,9 +931,6 @@ class JournalArticleEditorSerializer(TransporterSerializer):
         foreign_keys = {
             "editor": "editor_id"
         }
-        defaults = {
-            "editor_type": "editor"
-        }
         fields = tuple(field_map.keys())
 
     notified = BooleanField(**OPT_FIELD)
@@ -945,6 +942,12 @@ class JournalArticleEditorSerializer(TransporterSerializer):
     def pre_process(self, data: dict):
         data["notified"] = bool(data.get("date_notified"))
         data["assigned"] = data.get("assigned") or self.article.date_submitted or datetime.now()
+        if not data.get("editor_type"):
+            role = Role.objects.filter(slug="editor")
+            if role:
+                user = Account.objects.get(pk=data.get("editor_id"))
+                has_editor_role = AccountRole.objects.filter(user=user, role=role).exists()
+                data["editor_type"] = "editor" if has_editor_role else "section-editor"
 
 
 class JournalArticleAuthorSerializer(UserSerializer):
