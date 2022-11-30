@@ -15,7 +15,7 @@ from rest_framework.serializers import (ModelSerializer, SerializerMethodField, 
 from journal.models import ArticleOrdering, Issue, IssueType, Journal
 from submission import models as submission_models
 from submission.models import (Article, ArticleAuthorOrder, Field, FieldAnswer, FrozenAuthor,
-                               Keyword, KeywordArticle, Section)
+                               Keyword, KeywordArticle, Licence, Section)
 from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment,
                            ReviewAssignmentAnswer, ReviewerRating, EditorAssignment,
                            RevisionRequest)
@@ -834,7 +834,23 @@ class JournalArticleSerializer(TransporterSerializer):
         # Assign DOI
         doi = self.initial_data.get("doi")
         if doi:
-            Identifier.objects.create(id_type="doi", identifier=doi, article=model)
+            Identifier.objects.create(id_type="doi", identifier=doi, article=article)
+
+        self.create_import_log_entry(article)
+
+        # Assign license
+        license = self.initial_data.get("license")
+        if license:
+            license_dict = {}
+            if isinstance(license, dict):
+                license_dict = license
+            elif isinstance(license, str):
+                license_dict = {"url": license}
+
+            Licence.objects.get_or_create(
+                url=license.get("url"),
+                default=license_dict
+            )
 
         self.create_import_log_entry(model)
 
