@@ -949,6 +949,11 @@ class JournalArticleEditorSerializer(TransporterSerializer):
                 has_editor_role = AccountRole.objects.filter(user=user, role=role).exists()
                 data["editor_type"] = "editor" if has_editor_role else "section-editor"
 
+    def post_process(self, editor_assignment: EditorAssignment, data: dict) -> EditorAssignment:
+        if self.article.stage == submission_models.STAGE_UNASSIGNED:
+            self.article.stage = submission_models.STAGE_ASSIGNED
+            self.article.save()
+
 
 class JournalArticleAuthorSerializer(UserSerializer):
     """
@@ -1249,7 +1254,10 @@ class JournalArticleRoundSerializer(TransporterSerializer):
     round = IntegerField(source="round_number")
     date = DateTimeField(source="date_started", **OPT_FIELD)
 
-    def post_process(self, record: ReviewRound, data: dict):
+    def post_process(self, review_round: ReviewRound, data: dict):
+        if review_round.round_number == 1:
+            if review_round.article.stage in submission_models.NEW_ARTICLE_STAGES:
+                review_round.article.stage = submission_models.STAGE_UNDER_REVIEW
 
 
 class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
