@@ -976,7 +976,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
             "department": "department",
             "salutation": "name_prefix",
             "country_code": "country",
-            "order": "order",
+            "sequence": "order",
             "primary_contact": None,
             "user_id": "author_id"
         }
@@ -992,6 +992,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
     first_name = CharField(**OPT_STR_FIELD)
     last_name = CharField(**OPT_STR_FIELD)
     middle_name = CharField(**OPT_STR_FIELD)
+    sequence = IntegerField(source="order", **OPT_FIELD)
     affiliation = CharField(source="institution", default="None", max_length=1000, **OPT_STR_FIELD)
     department = CharField(**OPT_STR_FIELD)
     salutation = CharField(source="name_prefix", **OPT_STR_FIELD)
