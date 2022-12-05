@@ -1080,11 +1080,11 @@ class JournalArticleFileSerializer(TransporterSerializer):
 
         # If the file has a parent, then it belongs in the file history
         if self.initial_data.get("parent_target_record_key"):
-            replaced_file_pk = self.initial_data.get("parent_target_record_key").split(":")[-1]
-            replaced_file = File.objects.get(pk=replaced_file_pk)
-            if replaced_file:
+            file_to_be_replaced_pk = self.initial_data.get("parent_target_record_key").split(":")[-1]
+            file_to_be_replaced = File.objects.get(pk=file_to_be_replaced_pk)
+            if file_to_be_replaced:
                 # TODO: Is this the best way to do this? Is "overwriting" correct?
-                file = files.overwrite_file(raw_file, replaced_file, (self.article, self.article.pk))
+                file = files.overwrite_file(raw_file, file_to_be_replaced, ('articles', self.article.pk))
         else:
             file = files.save_file_to_article(raw_file,
                                               self.article,
