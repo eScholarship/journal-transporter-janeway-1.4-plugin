@@ -715,9 +715,9 @@ class JournalArticleSerializer(TransporterSerializer):
             "abstract": "abstract",
             "language": "language",
             "date_started": "date_started",
+            "date_submitted": "date_submitted",
             "date_accepted": "date_accepted",
             "date_declined": "date_declined",
-            "date_submitted": "date_submitted",
             "date_published": "date_published",
             "date_updated": "date_updated",
             "status": "stage",
@@ -750,15 +750,16 @@ class JournalArticleSerializer(TransporterSerializer):
         custom_fields = [
             "Acknowledgements"
         ]
+        default_timestamp = datetime(1900, 1, 1)
 
     title = CharField(**OPT_STR_FIELD)
     abstract = CharField(**OPT_STR_FIELD)
     cover_letter = CharField(source="comments_editor", **OPT_STR_FIELD)
     language = CharField(**OPT_STR_FIELD)
     date_started = DateTimeField(required=False, allow_null=True)
+    date_submitted = DateTimeField(required=False, allow_null=True)
     date_accepted = DateTimeField(required=False, allow_null=True)
     date_declined = DateTimeField(required=False, allow_null=True)
-    date_submitted = DateTimeField(required=False, allow_null=True)
     date_published = DateTimeField(required=False, allow_null=True)
     date_updated = DateTimeField(required=False, allow_null=True)
     status = CharField(source="stage", default="draft", **OPT_STR_FIELD)
@@ -782,16 +783,51 @@ class JournalArticleSerializer(TransporterSerializer):
             else:
                 data["stage"] = "Unsubmitted"
 
-        # Ensure as many dates as possible are extrapolated to prevent defaulting to day of import
-        # Default to 1/1/1900 if no date found (hopefully serves as an obvious unknown value)
-        last_date = datetime(1900, 1, 1)
-        for field_name in self.Meta.fields:
-            if not field_name.startswith("date_"): continue
+        self.derive_missing_dates(data)
 
-            if data.get(field_name):
-                last_date = data[field_name]
+    def derive_missing_dates(self, data: dict) -> None:
+        """
+        Derives, if possible, any missing dates that may apply.
+
+        These dates may not be perfectly accurate, but should be in acceptable timeline order.
+        """
+        # "date_started" will default to today if not explicitly defined
+        # Attempt to derive a reasonable (though probably not correct) value for it, if missing
+        if not data.get("date_started"):
+            ordered_date_fields = ["date_submitted", "date_accepted", "date_declined", "date_updated"]
+            possible_dates = [data.get(attr) for attr in ordered_date_fields if data.get(attr)]
+            if len(possible_dates):
+                data["date_started"] = self.date_after("date_started", data)
             else:
-                data[field_name] = last_date + timedelta(seconds=1)
+                # Obviously wrong fallback, so it can be fixed
+                data["date_started"] = self.Meta.default_timestamp
+
+        # If article is not unsubmitted, it must have a date_submitted
+        if not data.get("date_submitted") and not data["stage"] == submission_models.STAGE_UNSUBMITTED:
+            data["date_submitted"] = data["date_started"] + timedelta(minutes=1)
+
+        if not data["stage"] in submission_models.STAGE_REJECTED:
+            # If article is past review but date_accepted is blank, fill it in
+            if (
+                not data.get("date_accepted")
+                and not data["stage"] in submission_models.REVIEW_STAGES  # noqa: W503
+                and not data["stage"] in submission_models.NEW_ARTICLE_STAGES  # noqa: W503
+            ):
+                data["date_accepted"] = self.date_after("date_submitted", data)
+
+    def date_after(self, date_attr_name: str, data: dict) -> datetime:
+        found = False
+        for field in self.Meta.fields:
+            if field == date_attr_name:
+                found = True
+            elif not found:
+                continue
+
+            value = data.get(date_attr_name)
+            if value:
+                return value
+
+        return self.Meta.default_timestamp
 
     def post_process(self, article: Article, data: dict) -> Article:
         # Assign issues (M2M)
