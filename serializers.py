@@ -1233,7 +1233,7 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
             "decision": "type",
             "date": "date_requested",
             "date_due": "date_due",
-            "date_completed": "date_completed",
+            "date_response": "date_completed",
             "editor_id": "editor_id"
         }
         fields = tuple(field_map.keys())
@@ -1261,7 +1261,7 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
     author_comment = CharField(source="author_note", **OPT_STR_FIELD)
     date = DateTimeField(source="date_requested", **OPT_FIELD)
     date_due = DateTimeField(**OPT_FIELD)
-    date_completed = DateTimeField(**OPT_FIELD)
+    date_response = DateTimeField(source="date_completed", **OPT_FIELD)
 
     editor_id = IntegerField()
 
