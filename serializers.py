@@ -143,17 +143,24 @@ class TransporterSerializer(ModelSerializer):
                 self.__extract_foreign_key(data, lookup_key, foreign_key)
 
     def __extract_foreign_key(self, data, lookup_key, foreign_key):
-        """Extract a found foreign key value."""
+        """Extract a found foreign key value or list of values."""
         found = data.pop(lookup_key, None)
-        if found and isinstance(found, dict):
-            trk = found.pop("target_record_key", None)
-            if trk:
-                data[foreign_key] = self.parse_target_record_key(trk)
+        if found:
+            if isinstance(found, list):
+                parsed_result = list(map(self.__process_foreign_key, found))
+            elif isinstance(found, dict):
+                parsed_result = self.__process_foreign_key(found)
+
+            data[foreign_key] = parsed_result
+
+    def __process_foreign_key(self, fk_dict):
+        if isinstance(fk_dict, dict):
+            return self.parse_target_record_key(fk_dict.get("target_record_key"))
 
     @staticmethod
     def parse_target_record_key(value) -> str:
         """Parses a JTON record key to extract the local primary key."""
-        return value.split(":")[-1]
+        return value.split(":")[-1] if value else None
 
     def strip_html_content(self, data: dict) -> None:
         """
