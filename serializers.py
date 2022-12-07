@@ -773,6 +773,11 @@ class JournalArticleSerializer(TransporterSerializer):
 
     section_id = IntegerField(required=False, allow_null=True)
 
+    def before_validation(self, data: dict) -> None:
+        # If section(s) is sent as a list, pluck out the first one.
+        if isinstance(data.get("section_id"), list):
+            data["section_id"] = data.get("section_id")[0]
+
     def pre_process(self, data: dict) -> None:
         # Assign a default section if not otherwise defined.
         if not data.get("section_id"):
