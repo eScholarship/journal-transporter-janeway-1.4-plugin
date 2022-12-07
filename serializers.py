@@ -1306,7 +1306,8 @@ class JournalArticleRoundSerializer(TransporterSerializer):
                 review_round.article.stage = submission_models.STAGE_UNDER_REVIEW
 
             # Create review workflow entry
-            workflow_element = WorkflowElement.objects.get(journal_id=review_round.article.journal_id, element_name="review")
+            workflow_element = WorkflowElement.objects.get(journal_id=review_round.article.journal_id,
+                                                           element_name="review")
             existing = WorkflowLog.objects.filter(article=review_round.article, element=workflow_element)
             if not existing:
                 WorkflowLog.objects.create(article=review_round.article,
@@ -1402,7 +1403,9 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         # Build review rating, which comes in as a value between 0-100
         quality = self.initial_data.get("quality")
         if quality and review_assignment.editor:
-            ReviewerRating.objects.create(assignment=review_assignment, rater=review_assignment.editor, rating=(quality * 10))
+            ReviewerRating.objects.create(assignment=review_assignment,
+                                          rater=review_assignment.editor,
+                                          rating=(quality * 10))
 
         # Attach review_file to the round, if not done already
         round_review_file_ids = self.initial_data.get("round_review_file_ids")
