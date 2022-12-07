@@ -788,12 +788,16 @@ class JournalArticleSerializer(TransporterSerializer):
         # If stage didn't map to something sensical, try to derive
         # This may need to be updated later (i.e. review)
         if not data.get("stage"):
-            if data.get("date_published"):
-                data["stage"] = "Published"
+            if data.get("date_submitted"):
+                data["stage"] = submission_models.STAGE_UNASSIGNED
             elif data.get("date_declined"):
-                data["stage"] = "Rejected"
+                data["stage"] = submission_models.STAGE_REJECTED
+            elif data.get("date_accepted"):
+                data["stage"] = submission_models.STAGE_ACCEPTED
+            elif data.get("date_published"):
+                data["stage"] = submission_models.STAGE_PUBLISHED
             else:
-                data["stage"] = "Unsubmitted"
+                data["stage"] = submission_models.STAGE_UNSUBMITTED
 
         self.derive_missing_dates(data)
 
@@ -895,15 +899,6 @@ class JournalArticleSerializer(TransporterSerializer):
                 url=license.get("url"),
                 default=license_dict
             )
-
-        # Create initial workflow entry
-        if not article.stage == submission_models.STAGE_UNSUBMITTED:
-            workflow_element = WorkflowElement.objects.get(journal_id=self.journal_id, element_name="review")
-            existing = WorkflowLog.objects.filter(article=article, element=workflow_element)
-            if not existing:
-                WorkflowLog.objects.create(article=article,
-                                           element=workflow_element,
-                                           timestamp=article.date_submitted)
 
     def assign_custom_field_values(self, article: Article) -> None:
         """
@@ -1309,6 +1304,14 @@ class JournalArticleRoundSerializer(TransporterSerializer):
         if review_round.round_number == 1:
             if review_round.article.stage in submission_models.NEW_ARTICLE_STAGES:
                 review_round.article.stage = submission_models.STAGE_UNDER_REVIEW
+
+            # Create review workflow entry
+            workflow_element = WorkflowElement.objects.get(journal_id=review_round.article.journal_id, element_name="review")
+            existing = WorkflowLog.objects.filter(article=review_round.article, element=workflow_element)
+            if not existing:
+                WorkflowLog.objects.create(article=review_round.article,
+                                           element=workflow_element,
+                                           timestamp=(review_round.article.date_submitted or review_round.date_started))
 
 
 class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
