@@ -1325,8 +1325,9 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         foreign_keys = {
             "reviewer": "reviewer_id",
             "editor": "editor_id",
-            "review_file": "round_review_file_id",  # `review_file` in the payload is one round `review_file`
-            "reviewer_file": "review_file_id",  # `reviewer_file` in the payload is the assignment `review_file`
+            "review_files": "round_review_file_ids",  # `review_files` in the payload are round `review_files`
+            "reviewer_file": "reviewer_file_id",  # `reviewer_file` in the payload is the assignment `review_file`
+            "supp_files": "supplementary_file_ids",
             "review_form": "review_form_id"
         }
         field_map = {
@@ -1345,6 +1346,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
             "reviewer_id": "reviewer_id",
             "editor_id": "editor_id",
             "review_file_id": "review_file_id",
+            "reviewer_file_id": "reviewer_file_id",
             "review_form_id": "review_form_id",
         }
         decision_map = {
@@ -1375,7 +1377,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
 
     reviewer_id = IntegerField(**OPT_FIELD)
     editor_id = IntegerField(**OPT_FIELD)
-    review_file_id = IntegerField(**OPT_FIELD)
+    reviewer_file_id = IntegerField(source="review_file_id", **OPT_FIELD)
     review_form_id = IntegerField(source="form_id", **OPT_FIELD)
 
     quality = SerializerMethodField()
@@ -1396,17 +1398,29 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
             normalized_decision = data.get("decision").replace(" ", "_").lower()
             data["decision"] = self.Meta.decision_map.get(normalized_decision) or data.get("decision")
 
-    def post_process(self, record: ReviewAssignment, data: dict):
+    def post_process(self, review_assignment: ReviewAssignment, data: dict):
         # Build review rating, which comes in as a value between 0-100
         quality = self.initial_data.get("quality")
-        if quality and record.editor:
-            ReviewerRating.objects.create(assignment=record, rater=record.editor, rating=(quality * 10))
+        if quality and review_assignment.editor:
+            ReviewerRating.objects.create(assignment=review_assignment, rater=review_assignment.editor, rating=(quality * 10))
 
-        round_review_file_id = self.initial_data.get("round_review_file_id")
-        if round_review_file_id:
-            if not record.review_round.review_files.filter(pk=round_review_file_id).exists():
-                file = File.objects.get(pk=round_review_file_id)
-                record.review_round.review_files.add(file)
+        # Attach review_file to the round, if not done already
+        round_review_file_ids = self.initial_data.get("round_review_file_ids")
+        if round_review_file_ids:
+            if not review_assignment.review_round.review_files.filter(pk__in=round_review_file_ids).exists():
+                files = File.objects.filter(pk__in=round_review_file_ids)
+                for file in files:
+                    review_assignment.review_round.review_files.add(file)
+
+        # Attach supplementary files to the round, if not done already
+        supplementary_file_ids = self.initial_data.get("supplementary_file_ids")
+        if supplementary_file_ids and len(supplementary_file_ids):
+            already_added = review_assignment.review_round.review_files.filter(pk__in=supplementary_file_ids)
+            already_added_pks = [file.pk for file in already_added]
+            to_add = set(already_added_pks) - set(supplementary_file_ids)
+            for file_id in to_add:
+                file = File.objects.get(pk=file_id)
+                review_assignment.review_round.review_files.add(file)
 
 
 class JournalArticleRoundAssignmentResponseSerializer(TransporterSerializer):
