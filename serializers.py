@@ -1110,13 +1110,6 @@ class JournalArticleFileSerializer(TransporterSerializer):
 
     is_supplementary_file = BooleanField(read_only=True, default=False)
 
-    # If a filename (filename or file_name) are provided, override the original filename
-    # Maybe this should be an option or toggle?
-    # def pre_process(self, data: dict) -> None:
-    #     filename = self.initial_data.get("file_name") or self.initial_data.get("filename")
-    #     if filename:
-    #         data["original_filename"] = filename
-
     def create(self, data: dict) -> Model:
         self.article = self.get_article()
 
