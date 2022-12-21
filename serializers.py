@@ -1112,17 +1112,17 @@ class JournalArticleFileSerializer(TransporterSerializer):
 
     # If a filename (filename or file_name) are provided, override the original filename
     # Maybe this should be an option or toggle?
-    def pre_process(self, data: dict) -> None:
-        filename = self.initial_data.get("file_name") or self.initial_data.get("filename")
-        if filename:
-            data["original_filename"] = filename
+    # def pre_process(self, data: dict) -> None:
+    #     filename = self.initial_data.get("file_name") or self.initial_data.get("filename")
+    #     if filename:
+    #         data["original_filename"] = filename
 
-    def create(self, validated_data: dict) -> Model:
+    def create(self, data: dict) -> Model:
         self.article = self.get_article()
 
-        self.pre_process(validated_data)
+        self.pre_process(data)
 
-        raw_file = validated_data.pop("file")
+        raw_file = data.pop("file")
 
         # If the file has a parent, then it belongs in the file history
         if self.initial_data.get("parent_target_record_key"):
@@ -1132,15 +1132,17 @@ class JournalArticleFileSerializer(TransporterSerializer):
                 # TODO: Is this the best way to do this? Is "overwriting" correct?
                 file = files.overwrite_file(raw_file, file_to_be_replaced, ('articles', self.article.pk))
         else:
+            label_fields = ["label", "filename", "file_name", "original_filename"]
+            label = [data.get(field) for field in label_fields if data.get(field)][0]
             file = files.save_file_to_article(raw_file,
                                               self.article,
                                               None,
-                                              validated_data.get("label") or validated_data.get("original_filename"),
-                                              description=validated_data.get("description"),
-                                              is_galley=(validated_data.get("is_galley") or False)
+                                              label,
+                                              description=data.get("description"),
+                                              is_galley=(data.get("is_galley") or False)
                                               )
 
-        self.post_process(file, validated_data)
+        self.post_process(file, data)
         return file
 
     def post_process(self, record: File, data: dict):
