@@ -1101,7 +1101,7 @@ class JournalArticleFileSerializer(TransporterSerializer):
         }
         fields = tuple(field_map.keys())
 
-    file = FileField(write_only=True, use_url=False, allow_empty_file=True)
+    file = FileField(write_only=True, use_url=False, allow_empty_file=False)
     date_uploaded = DateTimeField(**OPT_FIELD)
     description = CharField(**OPT_STR_FIELD)
     label = CharField(**OPT_STR_FIELD)
