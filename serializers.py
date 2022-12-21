@@ -1361,7 +1361,8 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
             "resubmit_here": "major_revisions",
             "see_comments": "major_revisions",
             "resubmit_elsewhere": "reject",
-            "decline": "reject"
+            "decline": "reject",
+            "cancelled": "withdrawn"
         }
         visibility_map = {
             "open": "open",
@@ -1393,12 +1394,20 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         return (rating.rating * 10) if rating else None
 
     def before_validation(self, data: dict):
+        # Attempt to derive date_due
         if not data.get("date_due"):
             data["date_due"] = data.get("date_completed") or data.get("date_assigned")
+
+        # Extract comments from list, if needed
         comment = data.get("comments")
         data["comments"] = comment[0]["comments"] if isinstance(comment, list) and len(comment) > 0 else None
 
     def pre_process(self, data: dict):
+        # Handle various cancellation scenarios
+        # If decision/recommendation is blank but review is completed, assume it's cancelled
+        if data.get("date_complete") and not data.get("decision"):
+            data["decision"] = "withdrawn"
+
         # Map decision
         if data.get("decision"):
             normalized_decision = data.get("decision").replace(" ", "_").lower()
