@@ -729,12 +729,14 @@ class JournalArticleSerializer(TransporterSerializer):
             "date_updated": "date_updated",
             "status": "stage",
             "section_id": "section_id",
+            "owner_id": "owner_id",
             "cover_letter": "comments_editor"
         }
         defaults = {
             "title": "Untitled Article"
         }
         foreign_keys = {
+            "creator": "owner_id",
             "sections": "section_id"
         }
         fields = tuple(field_map.keys())
@@ -771,6 +773,7 @@ class JournalArticleSerializer(TransporterSerializer):
     date_updated = DateTimeField(required=False, allow_null=True)
     status = CharField(source="stage", default="draft", **OPT_STR_FIELD)
 
+    owner_id = IntegerField(required=False, allow_null=True)
     section_id = IntegerField(required=False, allow_null=True)
 
     def before_validation(self, data: dict) -> None:
