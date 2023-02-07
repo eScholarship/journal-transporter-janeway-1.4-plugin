@@ -895,12 +895,14 @@ class JournalArticleSerializer(TransporterSerializer):
             license_dict = {}
             if isinstance(license, dict):
                 license_dict = license
+                url = license.get("url")
             elif isinstance(license, str):
                 license_dict = {"url": license}
+                url = license
 
             Licence.objects.get_or_create(
-                url=license.get("url"),
-                default=license_dict
+                url=url,
+                defaults=license_dict
             )
 
     def assign_custom_field_values(self, article: Article) -> None:
