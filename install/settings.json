@@ -1,7 +1,7 @@
 [
   {
     "group": {
-      "name": "plugin:journal_transporter_janeway_plugin
+      "name": "plugin:journal_transporter_janeway_plugin"
     },
     "setting": {
       "description": "Plugin to interface with the Journal Transporter app",
