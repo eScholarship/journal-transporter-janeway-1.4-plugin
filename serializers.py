@@ -1343,7 +1343,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
             "responded": "is_complete",
             "comments": "comments_for_editor",
             "quality": "rating",
-            "has_response": "is_complete",
+            "is_complete": "is_complete",
             "reviewer_id": "reviewer_id",
             "editor_id": "editor_id",
             "review_file_id": "review_file_id",
@@ -1369,7 +1369,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
     recommendation = CharField(source="decision", **OPT_STR_FIELD)
     responded = BooleanField(source="is_complete", **OPT_FIELD)
     comments = CharField(source="comments_for_editor", **OPT_STR_FIELD)
-    has_response = BooleanField(source="is_complete", **OPT_FIELD)
+    is_complete = BooleanField(**OPT_FIELD)
     date_assigned = DateTimeField(source="date_requested", **OPT_FIELD)
     date_due = DateTimeField()
     date_confirmed = DateTimeField(source="date_accepted", **OPT_FIELD)
