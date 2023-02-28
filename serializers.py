@@ -900,10 +900,12 @@ class JournalArticleSerializer(TransporterSerializer):
                 license_dict = {"url": license}
                 url = license
 
-            Licence.objects.get_or_create(
+            l, created = Licence.objects.get_or_create(
                 url=url,
                 defaults=license_dict
             )
+            article.license = l
+            article.save()
 
     def assign_custom_field_values(self, article: Article) -> None:
         """
