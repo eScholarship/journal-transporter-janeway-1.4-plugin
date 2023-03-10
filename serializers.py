@@ -870,6 +870,7 @@ class JournalArticleSerializer(TransporterSerializer):
                                                                         section=article.section,
                                                                         defaults={"order": seq}
                                                                         )
+                    ordering.order = seq
                     ordering.save()
 
             article.save()
