@@ -873,6 +873,12 @@ class JournalArticleSerializer(TransporterSerializer):
                     ordering.order = seq
                     ordering.save()
 
+                # articles that are published but don't have a date published used a workaround
+                # in OJS/escholarship to have a year-only publication date.  eScholarship ignores
+                # month and day if they are jan-1
+                if article.stage == submission_models.STAGE_PUBLISHED and not article.date_published:
+                    article.date_published = datetime(issue.date.year, 1, 1)
+
             article.save()
 
         # Assign custom field values
