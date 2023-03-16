@@ -702,6 +702,7 @@ class JournalIssueSerializer(TransporterSerializer):
                 ordering.save()
                 i += 1
 
+
 class JournalSectionSerializer(TransporterSerializer):
     """
     Transporter serializer for journal sections (/journals/{journal_id}/sections/)
