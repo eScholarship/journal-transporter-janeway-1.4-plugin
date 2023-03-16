@@ -12,7 +12,7 @@ from rest_framework.serializers import (ModelSerializer, SerializerMethodField, 
                                         IntegerField, DateTimeField, EmailField, FileField,
                                         SlugRelatedField, BooleanField, ListField)
 
-from journal.models import ArticleOrdering, Issue, IssueType, Journal
+from journal.models import ArticleOrdering, Issue, IssueType, Journal, SectionOrdering
 from submission import models as submission_models
 from submission.models import (Article, ArticleAuthorOrder, Field, FieldAnswer, FrozenAuthor,
                                Keyword, KeywordArticle, Licence, Section)
@@ -655,6 +655,9 @@ class JournalIssueSerializer(TransporterSerializer):
             "issue_type",
             "issue_type_id"
         )
+        foreign_keys = {
+            "sections": "section_ids"
+        }
         defaults = {
             "title": "Untitled Issue",
             "date_published": str(timezone.now() + timedelta(days=(365 * 50)))
@@ -689,6 +692,15 @@ class JournalIssueSerializer(TransporterSerializer):
             issue.cover_image = data.get("cover_file_file")
             issue.save()
 
+        sections = self.initial_data.get("section_ids")
+        if sections:
+            i = 0
+            for section_id in sections:
+                section = Section.objects.get(pk=int(section_id))
+                ordering, created = SectionOrdering.objects.get_or_create(section=section, issue=issue)
+                ordering.order = i
+                ordering.save()
+                i += 1
 
 class JournalSectionSerializer(TransporterSerializer):
     """
