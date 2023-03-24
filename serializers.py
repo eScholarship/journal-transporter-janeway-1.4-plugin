@@ -517,7 +517,8 @@ class JournalReviewFormElementSerializer(TransporterSerializer):
             "checkboxes": "text",  # Concat multiselect checks to string
             "checkbox": "check",
             "check": "check",
-            "radio_buttons": "select"
+            "radio_buttons": "select",
+            "select": "select"
         }
         sentence_terminators = re.compile("\\.|\\?|!")
 
