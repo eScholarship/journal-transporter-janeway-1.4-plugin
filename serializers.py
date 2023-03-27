@@ -517,14 +517,15 @@ class JournalReviewFormElementSerializer(TransporterSerializer):
             "checkboxes": "text",  # Concat multiselect checks to string
             "checkbox": "check",
             "check": "check",
-            "radio_buttons": "select"
+            "radio_buttons": "select",
+            "select": "select"
         }
         sentence_terminators = re.compile("\\.|\\?|!")
 
     question = CharField(source="name")
     help_text = CharField(**OPT_STR_FIELD)
     type = CharField(source="kind")
-    responses = ListField(source="choices", child=CharField(), **OPT_FIELD)
+    responses = ListField(source="choices", child=CharField(**OPT_STR_FIELD), **OPT_FIELD)
     required = BooleanField(default=False, **OPT_FIELD)
     sequence = IntegerField(source="order", default=0, **OPT_FIELD)
     width = CharField(default='large-12 columns', **OPT_STR_FIELD)

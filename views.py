@@ -82,6 +82,8 @@ class JournalReviewFormElementViewSet(TransporterViewSet):
     queryset = ReviewFormElement.objects.all()
     serializer_class = serializers.JournalReviewFormElementSerializer
 
+    def get_queryset(self):
+        return self.queryset.filter(reviewform__pk=self.kwargs["parent_lookup_review_form__id"])
 
 class JournalRoleViewSet(TransporterViewSet):
     queryset = AccountRole.objects.all()
