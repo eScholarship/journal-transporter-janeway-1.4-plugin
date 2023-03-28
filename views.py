@@ -13,6 +13,7 @@ from core.models import Account, AccountRole, File
 from utils.models import LogEntry
 from core import files
 
+from django.contrib.contenttypes.models import ContentType
 
 # Adapted from chibisov's drf-extensions module
 # See https://github.com/chibisov/drf-extensions/blob/master/rest_framework_extensions/mixins.py
@@ -109,11 +110,16 @@ class JournalArticleEditorViewSet(TransporterViewSet):
     queryset = EditorAssignment.objects.all()
     serializer_class = serializers.JournalArticleEditorSerializer
 
+    def get_queryset(self):
+        return self.queryset.filter(article__pk=self.kwargs["parent_lookup_article__id"])
+
 
 class JournalArticleAuthorViewSet(TransporterViewSet):
     queryset = FrozenAuthor.objects.all()
     serializer_class = serializers.JournalArticleAuthorSerializer
 
+    def get_queryset(self):
+        return self.queryset.filter(article__pk=self.kwargs["parent_lookup_article__id"])
 
 class JournalArticleFileViewSet(TransporterViewSet):
     """
@@ -127,31 +133,52 @@ class JournalArticleFileViewSet(TransporterViewSet):
     parent_keys = ["article_id"]
 
     def retrieve(self, request, *args, **kwargs):
-        article = Article.objects.get(pk=kwargs["parent_lookup_article_id"])
+        article = Article.objects.get(pk=kwargs["parent_lookup_article__id"])
         file = File.objects.get(pk=kwargs["pk"])
         return files.serve_file(request, file, article)
+
+    def get_queryset(self):
+        return self.queryset.filter(article_id=self.kwargs["parent_lookup_article__id"])
 
 
 class JournalArticleLogEntryViewSet(TransporterViewSet):
     queryset = LogEntry.objects.all()
     serializer_class = serializers.JournalArticleLogEntrySerializer
 
+    def get_queryset(self):
+        ct = ContentType.objects.get_for_model(LogEntry)
+        return self.queryset.filter(content_type=ct,
+                                    object_id=self.kwargs["parent_lookup_article__id"])
+
 
 class JournalArticleRevisionRequestViewSet(TransporterViewSet):
     queryset = RevisionRequest.objects.all()
     serializer_class = serializers.JournalArticleRevisionRequestSerializer
+
+    def get_queryset(self):
+        return self.queryset.filter(article__pk=self.kwargs["parent_lookup_article__id"])
 
 
 class JournalArticleRoundViewSet(TransporterViewSet):
     queryset = ReviewRound.objects.all()
     serializer_class = serializers.JournalArticleRoundSerializer
 
+    def get_queryset(self):
+        return self.queryset.filter(article__pk=self.kwargs["parent_lookup_article__id"])
+
 
 class JournalArticleRoundAssignmentViewSet(TransporterViewSet):
     queryset = ReviewAssignment.objects.all()
     serializer_class = serializers.JournalArticleRoundAssignmentSerializer
 
+    def get_queryset(self):
+        return self.queryset.filter(article__pk=self.kwargs["parent_lookup_article__id"],
+                                    review_round__pk=self.kwargs["parent_lookup_review_round__id"])
+
 
 class JournalArticleRoundAssignmentResponseViewSet(TransporterViewSet):
     queryset = ReviewFormAnswer.objects.all()
     serializer_class = serializers.JournalArticleRoundAssignmentResponseSerializer
+
+    def get_queryset(self):
+        return self.queryset.filter(review_assignment__pk=self.kwargs["parent_lookup_assignment__id"])

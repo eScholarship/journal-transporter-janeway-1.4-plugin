@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 
 from rest_framework.serializers import (ModelSerializer, SerializerMethodField, CharField,
-                                        IntegerField, DateTimeField, EmailField, FileField,
+                                        IntegerField, DateTimeField, DateField, EmailField, FileField,
                                         SlugRelatedField, BooleanField, ListField)
 
 from journal.models import ArticleOrdering, Issue, IssueType, Journal, SectionOrdering
@@ -1394,7 +1394,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
     comments = CharField(source="comments_for_editor", **OPT_STR_FIELD)
     is_complete = BooleanField(**OPT_FIELD)
     date_assigned = DateTimeField(source="date_requested", **OPT_FIELD)
-    date_due = DateTimeField()
+    date_due = DateField()
     date_confirmed = DateTimeField(source="date_accepted", **OPT_FIELD)
     date_declined = DateTimeField(**OPT_FIELD)
     date_completed = DateTimeField(source="date_complete", **OPT_FIELD)
