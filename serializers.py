@@ -1416,6 +1416,8 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         if not data.get("date_due"):
             data["date_due"] = data.get("date_completed") or data.get("date_assigned")
 
+        data["date_due"] = datetime.strptime(data["date_due"], '%Y-%m-%dT%H:%M:%S%z').strftime('%Y-%m-%d')
+
         # Extract comments from list, if needed
         comment = data.get("comments")
         data["comments"] = comment[0]["comments"] if isinstance(comment, list) and len(comment) > 0 else None
