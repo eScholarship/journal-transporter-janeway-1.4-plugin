@@ -240,7 +240,7 @@ class TransporterSerializer(ModelSerializer):
             setattr(self, "{0}_{1}".format(fk_record_name, fk_lookup_key), value)
 
             if hasattr(self.Meta.model, fk_record_name):
-                fk_model = getattr(self.Meta.model, fk_record_name).field.rel.to
+                fk_model = getattr(self.Meta.model, fk_record_name).field.remote_field.model
                 lookup = {fk_lookup_key: value}
                 found = fk_model.objects.get(**lookup)
 
