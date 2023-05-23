@@ -384,6 +384,17 @@ class UserSerializer(TransporterSerializer):
             return existing
         except Account.DoesNotExist:
             return super().create(validated_data)
+        
+    #TODO add a post_process method to create interest objects for the user and
+    #attach them to the user
+    def post_process(self, user: Account, data: dict) -> None:
+        # Create user interests
+        # In OJS it is just a text field but in janeway it's a many
+        # to many field.
+        if(data.get("interests")):
+            interests = data.get("interests").split("|")
+            for interest in interests:
+                user.interests.add(interest)
 
 
 class JournalSerializer(TransporterSerializer):
