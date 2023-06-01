@@ -394,6 +394,7 @@ class UserSerializer(TransporterSerializer):
             interests = data.get("interests").split("|")
             for interest in interests:
                 user.interests.add(interest)
+            user.save()
 
 
 class JournalSerializer(TransporterSerializer):
