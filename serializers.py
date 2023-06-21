@@ -258,6 +258,23 @@ class TransporterSerializer(ModelSerializer):
 
             object.save()
 
+    #create interest objects for the user and attach them to the user
+    def add_interests_to_user(self, user: Account, data: dict) -> None:
+            if('interests' in data):
+                interests = data.get("interests").split(",")
+                # filter out empty strings from the interests list, boring
+                interests = list(filter(None, interests))
+                for interest in interests:
+                    # first add a new interest object
+                    # if it already exists, it will just return the existing one
+                    # if it doesn't exist, it will create a new one
+                    interest_object = Interest.objects.get_or_create(name=interest)
+                    # next, save the interest object, just in case
+                    interest_object[0].save()
+                    # next, assoicate the interest with the user
+                    user.interest.add(interest_object[0])
+                user.save()
+
     ############
     # Callbacks
     ############
@@ -398,29 +415,10 @@ class UserSerializer(TransporterSerializer):
         # because we've overridden the create method, we need to call the
         # post_process method manually
         self.post_process(user_to_return, validated_data)
-        return user_to_return
-        
-        
-    #create interest objects for the user and attach them to the user
-    def post_process(self, user: Account, data: dict) -> None:
-        # Create user interests
-        # In OJS it is just a text field but in janeway it's a many
-        # to many field.
-        if('interests' in data):
-            interests = data.get("interests").split(",")
-            # filter out empty strings from the interests list, boring
-            interests = list(filter(None, interests))
-            for interest in interests:
-                # first add a new interest object
-                # if it already exists, it will just return the existing one
-                # if it doesn't exist, it will create a new one
-                interest_object = Interest.objects.get_or_create(name=interest)
-                # next, save the interest object, just in case
-                interest_object[0].save()
-                # next, assoicate the interest with the user
-                user.interest.add(interest_object[0])
-            user.save()
+        return user_to_return    
 
+    def post_process(self, user: Account, data: dict) -> None:
+        super().add_interests_to_user(user, data)
 
 class JournalSerializer(TransporterSerializer):
     """
@@ -1061,7 +1059,6 @@ class JournalArticleEditorSerializer(TransporterSerializer):
             self.article.stage = submission_models.STAGE_ASSIGNED
             self.article.save()
 
-
 class JournalArticleAuthorSerializer(UserSerializer):
     """
     Transporter serializer for article authors (/journals/{id}/articles/{id}/authors).
@@ -1136,6 +1133,9 @@ class JournalArticleAuthorSerializer(UserSerializer):
             if self.initial_data.get("primary_contact"):
                 self.article.correspondence_author = record.author
             self.article.save()
+
+        # call the parent post_process
+        super().post_process(record, data)
 
     def get_primary_contact(self, record: FrozenAuthor):
         return record.is_correspondence_author
