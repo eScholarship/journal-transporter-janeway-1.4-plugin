@@ -268,11 +268,11 @@ class TransporterSerializer(ModelSerializer):
                     # first add a new interest object
                     # if it already exists, it will just return the existing one
                     # if it doesn't exist, it will create a new one
-                    interest_object = Interest.objects.get_or_create(name=interest)
+                    interest_object = Interest.objects.get_or_create(name=interest)[0]
                     # next, save the interest object, just in case
-                    interest_object[0].save()
+                    interest_object.save()
                     # next, assoicate the interest with the user
-                    user.interest.add(interest_object[0])
+                    user.interest.add(interest_object)
                 user.save()
 
     ############
