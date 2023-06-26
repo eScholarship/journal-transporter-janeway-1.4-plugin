@@ -19,13 +19,11 @@ from submission.models import (Article, ArticleAuthorOrder, Field, FieldAnswer, 
 from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAssignment,
                            ReviewAssignmentAnswer, ReviewerRating, EditorAssignment,
                            RevisionRequest)
-from core.models import Account, AccountRole, Country, File, Galley, Role, WorkflowElement, \
+from core.models import Account, AccountRole, Country, File, Galley, Interest, Role, WorkflowElement, \
     WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES
 from utils.models import LogEntry
 from identifiers.models import Identifier
 from core import files
-
-
 import re
 
 OPT_STR_FIELD = {"required": False, "allow_null": True, "allow_blank": True}
@@ -260,6 +258,23 @@ class TransporterSerializer(ModelSerializer):
 
             object.save()
 
+    #create interest objects for the user and attach them to the user
+    def add_interests_to_user(self, user: Account, data: dict) -> None:
+            if('interests' in data):
+                interests = data.get("interests").split(",")
+                # filter out empty strings from the interests list, boring
+                interests = list(filter(None, interests))
+                for interest in interests:
+                    # first add a new interest object
+                    # if it already exists, it will just return the existing one
+                    # if it doesn't exist, it will create a new one
+                    interest_object = Interest.objects.get_or_create(name=interest)[0]
+                    # next, save the interest object, just in case
+                    interest_object.save()
+                    # next, assoicate the interest with the user
+                    user.interest.add(interest_object)
+                user.save()
+
     ############
     # Callbacks
     ############
@@ -329,6 +344,7 @@ class UserSerializer(TransporterSerializer):
     """
     class Meta:
         model = Account
+        # interests is only temporarily included in the field map, we'll remove it after we make our fields list
         field_map = {
             "source_record_key": None,
             "email": "email",
@@ -340,12 +356,17 @@ class UserSerializer(TransporterSerializer):
             "salutation": "salutation",
             "country_code": "country",
             "biography": "biography",
+            "interests": "interests",
             "signature": "signature"
         }
         fields = tuple(field_map.keys())
         defaults = {
             "affiliation": "None"
         }
+        # remove interests from the field map, it's not actually part of
+        # the Account model, it's a many to many field
+        field_map.pop("interests")
+        
 
     email = EmailField()
     first_name = CharField(**OPT_STR_FIELD)
@@ -356,6 +377,7 @@ class UserSerializer(TransporterSerializer):
     salutation = CharField(**OPT_STR_FIELD)
     country_code = SlugRelatedField(source="country", slug_field="code", queryset=Country.objects.all(), **OPT_FIELD)
     biography = CharField(**OPT_STR_FIELD)
+    interests = CharField(**OPT_STR_FIELD)
     signature = CharField(**OPT_STR_FIELD)
 
     def before_validation(self, data: dict) -> None:
@@ -378,13 +400,25 @@ class UserSerializer(TransporterSerializer):
 
     # @override
     def create(self, validated_data: dict) -> Account:
+        # If any of these fields (e-mail, first_name, last_name) are null, we can't do anything with this user, so just skip it
+        if not validated_data["email"] or not validated_data["first_name"] or not validated_data["last_name"]:
+            return None
+        
         # Do not modify existing users; return existing user (lookup by email) if present.
         try:
             existing = Account.objects.get(email=validated_data["email"].lower())
-            return existing
+            # don't return yet, we need to run the post_process method, so
+            # save this user to a variable and return it after post_process
+            user_to_return = existing
         except Account.DoesNotExist:
-            return super().create(validated_data)
+            user_to_return = super().create(validated_data)
+        # because we've overridden the create method, we need to call the
+        # post_process method manually
+        self.post_process(user_to_return, validated_data)
+        return user_to_return    
 
+    def post_process(self, user: Account, data: dict) -> None:
+        super().add_interests_to_user(user, data)
 
 class JournalSerializer(TransporterSerializer):
     """
@@ -1025,7 +1059,6 @@ class JournalArticleEditorSerializer(TransporterSerializer):
             self.article.stage = submission_models.STAGE_ASSIGNED
             self.article.save()
 
-
 class JournalArticleAuthorSerializer(UserSerializer):
     """
     Transporter serializer for article authors (/journals/{id}/articles/{id}/authors).
@@ -1100,6 +1133,9 @@ class JournalArticleAuthorSerializer(UserSerializer):
             if self.initial_data.get("primary_contact"):
                 self.article.correspondence_author = record.author
             self.article.save()
+
+        # call the parent post_process
+        super().post_process(record, data)
 
     def get_primary_contact(self, record: FrozenAuthor):
         return record.is_correspondence_author
