@@ -1469,6 +1469,12 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
             data["decision"] = self.Meta.decision_map.get(normalized_decision) or data.get("decision")
 
     def post_process(self, review_assignment: ReviewAssignment, data: dict):
+        # date_requested field default is 'auto_now_add' which overwrites this date
+        date_requested = data.get("date_requested", None)
+        if date_requested:
+            review_assignment.date_requested = date_requested
+            review_assignment.save()
+
         # Build review rating, which comes in as a value between 0-100
         quality = self.initial_data.get("quality")
         if quality and review_assignment.editor:
