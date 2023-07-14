@@ -1452,7 +1452,12 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         if not data.get("date_due"):
             data["date_due"] = data.get("date_completed") or data.get("date_assigned")
 
-        data["date_due"] = datetime.strptime(data["date_due"], '%Y-%m-%dT%H:%M:%S%z').strftime('%Y-%m-%d')
+        # if due date received is a datetime convert to just date
+        # else just assume it's a date and let the system handle it
+        try:
+            data["date_due"] = datetime.strptime(data["date_due"], '%Y-%m-%dT%H:%M:%S%z').strftime('%Y-%m-%d')
+        except ValueError:
+            pass
 
         # Extract comments from list, if needed
         comment = data.get("comments")
