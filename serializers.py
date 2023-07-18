@@ -24,6 +24,7 @@ from core.models import Account, AccountRole, Country, File, Galley, Interest, R
 from utils.models import LogEntry
 from identifiers.models import Identifier
 from core import files
+from utils import setting_handler
 import re
 
 OPT_STR_FIELD = {"required": False, "allow_null": True, "allow_blank": True}
@@ -434,13 +435,15 @@ class JournalSerializer(TransporterSerializer):
             "title": "name",
             "description": "description",
             "online_issn": "issn",
-            "print_issn": "print_issn"
+            "print_issn": "print_issn",
+            "copyright_notice": "copyright_notice"
         }
         fields = tuple(field_map.keys())
         setting_values = (
             "name",
             "issn",
-            "print_issn"
+            "print_issn",
+            "copyright_notice"
         )
         attachments = {
             "header_file": "header_image",
@@ -452,10 +455,16 @@ class JournalSerializer(TransporterSerializer):
     description = CharField(**OPT_STR_FIELD)
     online_issn = CharField(source="issn", **OPT_STR_FIELD)
     print_issn = CharField(**OPT_STR_FIELD)
+    copyright_notice = CharField(**OPT_STR_FIELD)
 
     def post_process(self, journal: Journal, data: dict) -> None:
         # TODO - Need to look into importing article images if they exist
         journal.disable_article_images = True
+
+        # copyright_notice property is set in Serializer.create method.  The other settings have setters
+        # defined in the Journal model that create this settings object but it's not defined for copyright
+        if hasattr(journal, "copyright_notice"):
+            setting_handler.save_setting('general', 'copyright_notice', journal, journal.copyright_notice)
 
         # Mimic regular journal creation process
         journal.setup_directory()
