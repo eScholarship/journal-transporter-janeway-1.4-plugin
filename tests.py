@@ -2,7 +2,7 @@ from django.test import TestCase
 
 from .serializers import UserSerializer
 from .views import UserViewSet
-from core.models import Account 
+from core.models import Account, Interest
 
 class UserSerializerTest(TestCase):
     """
@@ -29,6 +29,20 @@ class UserSerializerTest(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('email', serializer.errors)
 
+    def test_add_interests(self):
+        data = {"username": "valid_user", 
+                "email": "validuser@example.com", 
+                "first_name": "Imma", 
+                "last_name": "Perfect", 
+                "interests": "Cats, Dogs"}
+        serializer = UserSerializer(data=data)
+        serializer.context["view"] = UserViewSet(kwargs={})
+        self.assertTrue(serializer.is_valid())
+
+        user = serializer.save()
+        self.assertEqual(Account.objects.count(), 1)
+        self.assertEqual(Interest.objects.count(), 2)
+        self.assertEqual(user.interest.count(), 2)        
 
     # For some reason first and last name are not required by the serializer
     # but if they are not filled out serializer.save will return None
