@@ -28,6 +28,14 @@ Adjust as needed, if you provided the plugin a different name.
 
 You can also access the endpoints directly in a browser or REST client. In a browser, you must be logged into Janeway. In a REST client, provide credentials as basic auth.
 
+### Tests
+
+There is a*very* small group of tests written as standard django test cases. The following command will run the tests assuming you've installed the plugin in a directory called "journal_transporter".
+
+```
+manage.py test journal_transporter
+```
+
 ## License
 
 This Janeway plugin is available under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE (Version 3, 19 November 2007).
