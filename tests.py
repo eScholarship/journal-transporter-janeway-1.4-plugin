@@ -54,7 +54,6 @@ class UserSerializerTest(TestCase):
         serializer.context["view"] = UserViewSet(kwargs={})
 
         self.assertTrue(serializer.is_valid())
-        #user = serializer.save()
 
     def test_user_serializer_invalid_user_missing_last_name(self):
         user_data = {"username": "invalid_user", "email": "invaliduser@example.com", "first_name": "Sam", "last_name": None}
@@ -62,4 +61,3 @@ class UserSerializerTest(TestCase):
         serializer.context["view"] = UserViewSet(kwargs={})
 
         self.assertTrue(serializer.is_valid())
-        #user = serializer.save()
