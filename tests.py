@@ -1,14 +1,32 @@
 from django.test import TestCase
 
-from .serializers import UserSerializer, JournalArticleRoundAssignmentSerializer
-from .views import UserViewSet, JournalArticleRoundViewSet
+from .serializers import UserSerializer, JournalArticleRoundAssignmentSerializer, JournalSerializer
+from .views import UserViewSet, JournalArticleRoundViewSet, JournalViewSet
 
 from core.models import Account, Interest
 from review.models import ReviewRound
 from utils.testing import helpers
+from utils import setting_handler
 
 import datetime
 from django.utils import timezone
+
+class TestJournalSerializerTest(TestCase):
+
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+
+    def test_copyright_notice(self):
+        notice = 'This is the copyright notice'
+        data = {"path": "testj", "title": "Test Journal", "copyright_notice": notice}
+        s = JournalSerializer(data=data)
+        s.context["view"] = JournalViewSet(kwargs={})
+
+        self.assertTrue(s.is_valid())
+
+        j = s.save()
+
+        self.assertEqual(setting_handler.get_setting('general', 'copyright_notice', j).value, notice)
 
 class AssignmentSerializerTest(TestCase):
 
