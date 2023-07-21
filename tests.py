@@ -1,8 +1,54 @@
 from django.test import TestCase
 
-from .serializers import UserSerializer
-from .views import UserViewSet
+from .serializers import UserSerializer, JournalArticleRoundAssignmentSerializer
+from .views import UserViewSet, JournalArticleRoundViewSet
+
 from core.models import Account, Interest
+from review.models import ReviewRound
+from utils.testing import helpers
+
+import datetime
+from django.utils import timezone
+
+class AssignmentSerializerTest(TestCase):
+
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+        self.article = helpers.create_article(self.journal)
+        self.round = ReviewRound.objects.create(article=self.article, round_number=1)
+
+    def validate_serializer(self, data):
+        s = JournalArticleRoundAssignmentSerializer(data=data)
+        s.context["view"] = JournalArticleRoundViewSet(kwargs={})
+
+        self.assertTrue(s.is_valid())
+        # typically this is set by the view but since we're
+        # circumventing that just set it manually
+        s.validated_data['article_id'] = self.article.pk
+        return s
+
+    def test_date_requested(self):
+        dtformat = '%Y-%m-%dT%H:%M:%S%z'
+        date_assigned = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+
+        s = self.validate_serializer({'date_assigned': date_assigned})
+
+        a = s.save()
+
+        self.assertEqual(a.date_requested.strftime(dtformat), date_assigned)
+        self.assertEqual(a.date_due.strftime("%Y-%m-%d"), "2023-01-01")
+
+    def test_date_due(self):
+        date_due = datetime.date(2023, 1, 1).strftime("%Y-%m-%d")
+        dtformat = '%Y-%m-%dT%H:%M:%S%z'
+        date_assigned = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        data = {"date_due": date_due, "date_assigned": date_assigned}
+
+        s = self.validate_serializer(data)
+
+        a = s.save()
+        self.assertEqual(a.date_requested.strftime(dtformat), date_assigned)
+        self.assertEqual(a.date_due.strftime("%Y-%m-%d"), "2023-01-01")
 
 class UserSerializerTest(TestCase):
     """
