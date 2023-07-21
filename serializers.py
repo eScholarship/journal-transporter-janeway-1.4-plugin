@@ -258,23 +258,6 @@ class TransporterSerializer(ModelSerializer):
 
             object.save()
 
-    #create interest objects for the user and attach them to the user
-    def add_interests_to_user(self, user: Account, data: dict) -> None:
-            if('interests' in data):
-                interests = data.get("interests").split(",")
-                # filter out empty strings from the interests list, boring
-                interests = list(filter(None, interests))
-                for interest in interests:
-                    # first add a new interest object
-                    # if it already exists, it will just return the existing one
-                    # if it doesn't exist, it will create a new one
-                    interest_object = Interest.objects.get_or_create(name=interest)[0]
-                    # next, save the interest object, just in case
-                    interest_object.save()
-                    # next, assoicate the interest with the user
-                    user.interest.add(interest_object)
-                user.save()
-
     ############
     # Callbacks
     ############
@@ -363,9 +346,6 @@ class UserSerializer(TransporterSerializer):
         defaults = {
             "affiliation": "None"
         }
-        # remove interests from the field map, it's not actually part of
-        # the Account model, it's a many to many field
-        field_map.pop("interests")
         
 
     email = EmailField()
@@ -389,6 +369,10 @@ class UserSerializer(TransporterSerializer):
             data["country_code"] = matches[0] if len(matches) else None
         else:
             data["country_code"] = None
+
+        # remove interests from data else Account.create complains
+        # save it in serializer and deal with it in post_process
+        self.interest_data = data.pop("interests", None)
 
         # Ensure salutation fits SALUTATION_CHOICES list
         if data.get("salutation"):
@@ -418,7 +402,22 @@ class UserSerializer(TransporterSerializer):
         return user_to_return    
 
     def post_process(self, user: Account, data: dict) -> None:
-        super().add_interests_to_user(user, data)
+        # create interest objects for the user and attach them to the user
+        if self.interest_data:
+            interests = self.interest_data.split(",")
+            # filter out empty strings from the interests list, boring
+            interests = list(filter(None, interests))
+            for interest in interests:
+                # first add a new interest object
+                # if it already exists, it will just return the existing one
+                # if it doesn't exist, it will create a new one
+                interest_object, created = Interest.objects.get_or_create(name=interest)
+                # next, save the interest object if new
+                if created:
+                    interest_object.save()
+                # next, assoicate the interest with the user
+                user.interest.add(interest_object)
+            user.save()
 
 class JournalSerializer(TransporterSerializer):
     """
