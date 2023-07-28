@@ -350,8 +350,8 @@ class UserSerializer(TransporterSerializer):
         
 
     email = EmailField()
-    first_name = CharField(**OPT_STR_FIELD)
-    last_name = CharField(**OPT_STR_FIELD)
+    first_name = CharField()
+    last_name = CharField()
     middle_name = CharField(**OPT_STR_FIELD)
     affiliation = CharField(source="institution", default="None", max_length=1000, **OPT_STR_FIELD)
     department = CharField(**OPT_STR_FIELD)
@@ -385,10 +385,6 @@ class UserSerializer(TransporterSerializer):
 
     # @override
     def create(self, validated_data: dict) -> Account:
-        # If any of these fields (e-mail, first_name, last_name) are null, we can't do anything with this user, so just skip it
-        if not validated_data["email"] or not validated_data["first_name"] or not validated_data["last_name"]:
-            return None
-        
         # Do not modify existing users; return existing user (lookup by email) if present.
         try:
             existing = Account.objects.get(email=validated_data["email"].lower())

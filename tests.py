@@ -108,20 +108,18 @@ class UserSerializerTest(TestCase):
         self.assertEqual(Interest.objects.count(), 2)
         self.assertEqual(user.interest.count(), 2)        
 
-    # For some reason first and last name are not required by the serializer
-    # but if they are not filled out serializer.save will return None
-    # DRF does NOT like this. We should probably just make them required but
-    # I'm just not sure why the code was written this way in the first place.
     def test_user_serializer_invalid_user_missing_first_name(self):
         user_data = {"username": "invalid_user", "email": "invaliduser@example.com", "first_name": None, "last_name": "Sam"}
         serializer = UserSerializer(data=user_data)
         serializer.context["view"] = UserViewSet(kwargs={})
 
-        self.assertTrue(serializer.is_valid())
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('first_name', serializer.errors)
 
     def test_user_serializer_invalid_user_missing_last_name(self):
         user_data = {"username": "invalid_user", "email": "invaliduser@example.com", "first_name": "Sam", "last_name": None}
         serializer = UserSerializer(data=user_data)
         serializer.context["view"] = UserViewSet(kwargs={})
 
-        self.assertTrue(serializer.is_valid())
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('last_name', serializer.errors)
