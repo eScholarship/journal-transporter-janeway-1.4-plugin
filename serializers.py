@@ -444,6 +444,7 @@ class JournalSerializer(TransporterSerializer):
             "header_file": "header_image",
             "cover_file": "default_cover_image"
         }
+        html_fields = ["copyright_notice"]
 
     path = CharField(source="code")
     title = CharField(source="name")

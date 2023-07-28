@@ -28,6 +28,18 @@ class TestJournalSerializerTest(TestCase):
 
         self.assertEqual(setting_handler.get_setting('general', 'copyright_notice', j).value, notice)
 
+    def test_copyright_html(self):
+        notice = "<p><strong>I grant <em>Clinical Practice and Cases in Emergency Medicine </em>(the \u201cJournal\u201d) on behalf of The Regents of the University of California (\u201cThe Regents\u201d) the non-exclusive right to make any material submitted by the Author to the Journal (the \u201cWork\u201d) available in any format in perpetuity, and to authorize others to do the same. </strong></p> <p>The Author and the Journal agree that eScholarship will publish the article under a <strong>Creative Commons Attribution</strong> license, which is incorporated herein by reference and is further specified at <a href=\"http://creativecommons.org/licenses/by/4.0/\">http://creativecommons.org/licenses/by/4.0/</a>, or later versions of the same license. A brief summary of the license agreement as presented to users is listed below:</p> <p>You are free to:</p> <ul><li>Share \u2013 copy and redistribute the material in any      medium or format; </li><li>Adapt \u2013 remix, transform, and build upon the material;</li><li>for any purpose, even commercially.</li></ul><p>Under the following terms:</p> <ul><li>Attribution \u2014 You must give appropriate credit, provide      a link to the license, and indicate if changes were made. You may do so in      any reasonable manner, but not in any way that suggests the licensor      endorses you or your use.</li></ul><p>The Author warrants as follows:<br /><br /> (a) that the Author has the full power and authority to make this agreement;<br /> (b) that the Work does not infringe any copyrights or trademarks, nor violate any proprietary rights, nor contain any libelous matter, nor invade the privacy of any person or third party; and<br /> (c) that no right in the Work has in any way been sold, mortgaged, or otherwise disposed of, and that the Work is free from all liens and claims.<br /><br /> The Author understands that once the Work is deposited in eScholarship, a full bibliographic citation to the Work will remain visible in perpetuity, even if the Work is updated or removed.<br /><br /><strong>For authors who are not employees of the University of California:</strong><br /> The Author agrees to hold The Regents of the University of California, the California Digital Library, the Journal, and its agents harmless for any losses, claims, damages, awards, penalties, or injuries incurred, including any reasonable attorney's fees that arise from any breach of warranty or for any claim by any third party of an alleged infringement of copyright or any other intellectual property rights arising from the Depositor\u2019s submission of materials with the California Digital Library or of the use by the University of California or other users of such materials.</p>"
+        data = {"path": "testj", "title": "Test Journal", "copyright_notice": notice}
+        s = JournalSerializer(data=data)
+        s.context["view"] = JournalViewSet(kwargs={})
+
+        self.assertTrue(s.is_valid())
+
+        j = s.save()
+
+        self.assertEqual(setting_handler.get_setting('general', 'copyright_notice', j).value, notice)
+
 class AssignmentSerializerTest(TestCase):
 
     def setUp(self):
