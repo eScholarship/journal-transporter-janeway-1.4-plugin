@@ -80,6 +80,11 @@ class AssignmentSerializerTest(TestCase):
         self.assertEqual(a.date_requested.strftime(dtformat), date_assigned)
         self.assertEqual(a.date_due.strftime("%Y-%m-%d"), "2023-01-01")
 
+    def test_no_dates(self):
+        s = self.validate_serializer({})
+        a = s.save()
+        self.assertEqual(a.date_due.strftime("%Y-%m-%d"), datetime.date.today().strftime('%Y-%m-%d'))
+
 class UserSerializerTest(TestCase):
     """
     Test UserSerializer

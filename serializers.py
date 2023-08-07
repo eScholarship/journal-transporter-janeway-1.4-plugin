@@ -1,7 +1,7 @@
 import json
 import textwrap
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from bs4 import BeautifulSoup
 
 from django.db.models import Model, Q
@@ -1457,9 +1457,15 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         return (rating.rating * 10) if rating else None
 
     def before_validation(self, data: dict):
+
         # Attempt to derive date_due
         if not data.get("date_due"):
-            data["date_due"] = data.get("date_completed") or data.get("date_assigned")
+            if data.get("date_completed"):
+                data["date_due"] = data.get("date_completed")
+            elif data.get("date_assigned"):
+                data["date_due"] = data.get("date_assigned")
+            else:
+                data["date_due"] = date.today().strftime('%Y-%m-%d')
 
         # if due date received is a datetime convert to just date
         # else just assume it's a date and let the system handle it
