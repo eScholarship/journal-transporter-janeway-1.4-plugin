@@ -1,12 +1,13 @@
 from django.test import TestCase
 
-from .serializers import UserSerializer, JournalArticleRoundAssignmentSerializer, JournalSerializer
-from .views import UserViewSet, JournalArticleRoundViewSet, JournalViewSet
+from .serializers import *
+from .views import *
 
 from core.models import Account, Interest
-from review.models import ReviewRound
+from review.models import ReviewRound, EditorAssignment
 from utils.testing import helpers
 from utils import setting_handler
+from submission.models import ArticleAuthorOrder
 
 import datetime
 from django.utils import timezone
@@ -40,7 +41,7 @@ class TestJournalSerializerTest(TestCase):
 
         self.assertEqual(setting_handler.get_setting('general', 'copyright_notice', j).value, notice)
 
-class AssignmentSerializerTest(TestCase):
+class ReviewAssignmentSerializerTest(TestCase):
 
     def setUp(self):
         self.journal, _ = helpers.create_journals()
@@ -79,6 +80,74 @@ class AssignmentSerializerTest(TestCase):
         a = s.save()
         self.assertEqual(a.date_requested.strftime(dtformat), date_assigned)
         self.assertEqual(a.date_due.strftime("%Y-%m-%d"), "2023-01-01")
+
+    def test_no_dates(self):
+        s = self.validate_serializer({})
+        a = s.save()
+        self.assertEqual(a.date_due.strftime("%Y-%m-%d"), datetime.date.today().strftime('%Y-%m-%d'))
+
+class EditorAssignmentSerializerTest(TestCase):
+
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+        self.article = helpers.create_article(self.journal)
+        self.user = helpers.create_user("ed@test.edu")
+
+    def validate_serializer(self, data):
+        s = JournalArticleEditorSerializer(data=data)
+        s.context["view"] = JournalArticleEditorViewSet(kwargs={})
+        s.article = self.article
+
+        self.assertTrue(s.is_valid())
+        # typically this is set by the view but since we're
+        # circumventing that just set it manually
+        s.validated_data['article_id'] = self.article.pk
+        return s
+
+    def test_duplicates(self):
+        dtformat = '%Y-%m-%dT%H:%M:%S%z'
+
+        date_assigned1 = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        data1 = {'editor_id': self.user.pk, 'date_notified': date_assigned1, 'editor_type': "section-editor", 'notified': True}
+        a1 = self.validate_serializer(data1).save()
+
+        date_assigned2 = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        data2 = {'editor_id': self.user.pk, 'date_notified': date_assigned2, 'editor_type': "editor", 'notified': False}
+        a2 = self.validate_serializer(data2).save()
+
+        self.assertEqual(a1, a2)
+        self.assertEqual(a1.editor.pk, self.user.pk)
+        self.assertEqual(a1.article.pk, self.article.pk)
+        self.assertEqual(a1.editor_type, 'section-editor')
+        self.assertEqual(a1.notified, True)
+        self.assertEqual(a1.assigned.strftime(dtformat), date_assigned1)
+
+class AuthorAssignmentSerializerTest(TestCase):
+
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+        self.article = helpers.create_article(self.journal)
+        self.user = helpers.create_user("author@test.edu")
+
+    def validate_serializer(self, data):
+        s = JournalArticleAuthorSerializer(data=data)
+        s.context["view"] = JournalArticleAuthorViewSet(kwargs={})
+        s.article = self.article
+
+        self.assertTrue(s.is_valid())
+        # typically this is set by the view but since we're
+        # circumventing that just set it manually
+        s.validated_data['article_id'] = self.article.pk
+        return s
+
+    def test_multiple_objects(self):
+        data = {'user_id': self.user.pk, 'email': self.user.email, 'first_name': 'Author', 'last_name': 'Test', 'sequence': 1}
+        s = self.validate_serializer(data)
+        a1 = s.save()
+        s = self.validate_serializer(data)
+        a2 = s.save()
+
+        self.assertEqual(ArticleAuthorOrder.objects.filter(article=self.article, author=self.user, order=1).count(), 1)
 
 class UserSerializerTest(TestCase):
     """
