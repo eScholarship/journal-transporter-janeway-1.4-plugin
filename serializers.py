@@ -1063,6 +1063,26 @@ class JournalArticleEditorSerializer(TransporterSerializer):
                 has_editor_role = AccountRole.objects.filter(user=user, role=role).exists()
                 data["editor_type"] = "editor" if has_editor_role else "section-editor"
 
+    # get_or_create doesn't work properly finding items that use unique_together
+    # recommended solution is to pass data with only unique_together items and
+    # other fields defined in defaults
+    def create(self, data: dict) -> EditorAssignment:
+        self.apply_parent_id(data)
+        self.pre_process(data)
+        validated_data = {'editor_id': data.pop('editor_id'), 'article_id': data.pop('article_id')}
+
+        setting_values = self.extract_setting_values(data)
+        instance, _created = EditorAssignment.objects.get_or_create(**validated_data, defaults=data)
+
+        for key, value in setting_values.items():
+            if value: setattr(instance, key, value)
+        instance.save()
+
+        self.handle_attachments(instance)
+        self.post_process(instance, data)
+
+        return instance
+
     def post_process(self, editor_assignment: EditorAssignment, data: dict) -> EditorAssignment:
         if self.article.stage == submission_models.STAGE_UNASSIGNED:
             self.article.stage = submission_models.STAGE_ASSIGNED
