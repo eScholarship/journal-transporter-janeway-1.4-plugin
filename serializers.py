@@ -1152,7 +1152,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
             self.article.authors.add(record.author)
 
             # Set order
-            ArticleAuthorOrder.objects.create(
+            ArticleAuthorOrder.objects.get_or_create(
                 article=self.article,
                 author=record.author,
                 order=self.initial_data.get("sequence", self.article.authors.count() + 1)

@@ -1,12 +1,13 @@
 from django.test import TestCase
 
-from .serializers import UserSerializer, JournalArticleRoundAssignmentSerializer, JournalSerializer, JournalArticleEditorSerializer
-from .views import UserViewSet, JournalArticleRoundViewSet, JournalViewSet, JournalArticleEditorViewSet
+from .serializers import *
+from .views import *
 
 from core.models import Account, Interest
 from review.models import ReviewRound, EditorAssignment
 from utils.testing import helpers
 from utils import setting_handler
+from submission.models import ArticleAuthorOrder
 
 import datetime
 from django.utils import timezone
@@ -120,6 +121,33 @@ class EditorAssignmentSerializerTest(TestCase):
         self.assertEqual(a1.editor_type, 'section-editor')
         self.assertEqual(a1.notified, True)
         self.assertEqual(a1.assigned.strftime(dtformat), date_assigned1)
+
+class AuthorAssignmentSerializerTest(TestCase):
+
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+        self.article = helpers.create_article(self.journal)
+        self.user = helpers.create_user("author@test.edu")
+
+    def validate_serializer(self, data):
+        s = JournalArticleAuthorSerializer(data=data)
+        s.context["view"] = JournalArticleAuthorViewSet(kwargs={})
+        s.article = self.article
+
+        self.assertTrue(s.is_valid())
+        # typically this is set by the view but since we're
+        # circumventing that just set it manually
+        s.validated_data['article_id'] = self.article.pk
+        return s
+
+    def test_multiple_objects(self):
+        data = {'user_id': self.user.pk, 'email': self.user.email, 'first_name': 'Author', 'last_name': 'Test', 'sequence': 1}
+        s = self.validate_serializer(data)
+        a1 = s.save()
+        s = self.validate_serializer(data)
+        a2 = s.save()
+
+        self.assertEqual(ArticleAuthorOrder.objects.filter(article=self.article, author=self.user, order=1).count(), 1)
 
 class UserSerializerTest(TestCase):
     """
