@@ -41,6 +41,29 @@ class TestJournalSerializerTest(TestCase):
 
         self.assertEqual(setting_handler.get_setting('general', 'copyright_notice', j).value, notice)
 
+class ReviewRoundASerializerTest(TestCase):
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+        self.article = helpers.create_article(self.journal)
+
+    def validate_serializer(self, data):
+        s = JournalArticleRoundSerializer(data=data)
+        s.context["view"] = JournalArticleRoundViewSet(kwargs={})
+
+        self.assertTrue(s.is_valid())
+        # typically this is set by the view but since we're
+        # circumventing that just set it manually
+        s.validated_data['article_id'] = self.article.pk
+        return s
+
+    def test_date_started(self):
+        date_started = "2022-03-28T18:03:34+0000"
+        data = {'round': 1, 'date': date_started}
+        s = self.validate_serializer(data)
+        round = s.save()
+
+        self.assertEqual(round.date_started.strftime('%Y-%m-%dT%H:%M:%S%z'), date_started)
+
 class ReviewAssignmentSerializerTest(TestCase):
 
     def setUp(self):

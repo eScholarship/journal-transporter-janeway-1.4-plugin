@@ -1408,6 +1408,11 @@ class JournalArticleRoundSerializer(TransporterSerializer):
                                            element=workflow_element,
                                            timestamp=(review_round.article.date_submitted or review_round.date_started))
 
+        # override auto_now_add for date_started
+        date_started = data.get("date_started", None)
+        if date_started:
+            review_round.date_started = date_started
+            review_round.save()
 
 class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
     """
