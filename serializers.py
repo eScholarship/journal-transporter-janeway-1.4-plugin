@@ -938,6 +938,12 @@ class JournalArticleSerializer(TransporterSerializer):
 
             article.save()
 
+        # override auto_now_add for date_started
+        date_started = data.get("date_started", None)
+        if date_started:
+            article.date_started = date_started
+            article.save()
+
         # Assign custom field values
         self.assign_custom_field_values(article)
 

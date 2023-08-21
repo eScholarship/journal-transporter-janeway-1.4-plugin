@@ -122,6 +122,26 @@ class EditorAssignmentSerializerTest(TestCase):
         self.assertEqual(a1.notified, True)
         self.assertEqual(a1.assigned.strftime(dtformat), date_assigned1)
 
+class ArticleSerializerTest(TestCase):
+
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+
+    def validate_serializer(self, data):
+        s = JournalArticleSerializer(data=data)
+        s.context["view"] = JournalArticleViewSet(kwargs={})
+        s.journal = self.journal
+        self.assertTrue(s.is_valid())
+        return s
+
+    def test_date_started(self):
+        date_started = "2022-03-28T18:03:34+0000"
+        data = {'title': "Title 1", 'date_started': date_started}
+        s = self.validate_serializer(data)
+        article = s.save()
+
+        self.assertEqual(article.date_started.strftime('%Y-%m-%dT%H:%M:%S%z'), date_started)
+
 class AuthorAssignmentSerializerTest(TestCase):
 
     def setUp(self):
