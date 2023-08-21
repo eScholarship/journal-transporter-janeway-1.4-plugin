@@ -1155,7 +1155,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
             ArticleAuthorOrder.objects.get_or_create(
                 article=self.article,
                 author=record.author,
-                order=self.initial_data.get("sequence", self.article.authors.count() + 1)
+                defaults={"order": self.initial_data.get("sequence", self.article.authors.count() + 1)}
             )
 
             # Primary contact is not a model attr, so look it up in the initial (unvalidated) data.

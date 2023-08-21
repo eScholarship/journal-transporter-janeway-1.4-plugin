@@ -141,13 +141,15 @@ class AuthorAssignmentSerializerTest(TestCase):
         return s
 
     def test_multiple_objects(self):
-        data = {'user_id': self.user.pk, 'email': self.user.email, 'first_name': 'Author', 'last_name': 'Test', 'sequence': 1}
+        data = {'user_id': self.user.pk, 'email': self.user.email, 'first_name': 'Author', 'last_name': 'Test', 'sequence': 2}
         s = self.validate_serializer(data)
         a1 = s.save()
+        data['sequence'] = 3
         s = self.validate_serializer(data)
         a2 = s.save()
 
-        self.assertEqual(ArticleAuthorOrder.objects.filter(article=self.article, author=self.user, order=1).count(), 1)
+        self.assertEqual(ArticleAuthorOrder.objects.filter(article=self.article, author=self.user).count(), 1)
+        self.assertEqual(ArticleAuthorOrder.objects.get(article=self.article, author=self.user).order, 2)
 
 class UserSerializerTest(TestCase):
     """
