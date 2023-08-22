@@ -1046,7 +1046,8 @@ class JournalArticleEditorSerializer(TransporterSerializer):
             "notified": "notified",
             "date_notified": "assigned",
             "editor_type": "editor_type",
-            "editor_id": "editor_id"
+            "editor_id": "editor_id",
+            "is_editor": "is_editor"
         }
         foreign_keys = {
             "editor": "editor_id"
@@ -1055,19 +1056,18 @@ class JournalArticleEditorSerializer(TransporterSerializer):
 
     notified = BooleanField(**OPT_FIELD)
     date_notified = DateTimeField(source="assigned", **OPT_FIELD)
-    editor_type = CharField(default="editor", **OPT_STR_FIELD)
+    editor_type = CharField(**OPT_STR_FIELD)
 
     editor_id = IntegerField()
+    is_editor = BooleanField(**OPT_FIELD)
 
     def pre_process(self, data: dict):
         data["notified"] = bool(data.get("assigned"))
         data["assigned"] = data.get("assigned") or self.article.date_submitted or datetime.now()
+        is_editor = data.pop("is_editor", True)
+
         if not data.get("editor_type"):
-            role = Role.objects.filter(slug="editor")
-            if role:
-                user = Account.objects.get(pk=data.get("editor_id"))
-                has_editor_role = AccountRole.objects.filter(user=user, role=role).exists()
-                data["editor_type"] = "editor" if has_editor_role else "section-editor"
+            data["editor_type"] = "editor" if is_editor else "section-editor"
 
     # get_or_create doesn't work properly finding items that use unique_together
     # recommended solution is to pass data with only unique_together items and

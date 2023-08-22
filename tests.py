@@ -127,6 +127,19 @@ class EditorAssignmentSerializerTest(TestCase):
         s.validated_data['article_id'] = self.article.pk
         return s
 
+    def test_is_editor(self):
+        dtformat = '%Y-%m-%dT%H:%M:%S%z'
+
+        assigned = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        data = {'editor_id': self.user.pk, 'date_notified': assigned, 'is_editor': False, 'notified': True}
+        a = self.validate_serializer(data).save()
+
+        self.assertEqual(a.editor.pk, self.user.pk)
+        self.assertEqual(a.article.pk, self.article.pk)
+        self.assertEqual(a.editor_type, 'section-editor')
+        self.assertEqual(a.notified, True)
+        self.assertEqual(a.assigned.strftime(dtformat), assigned)
+
     def test_duplicates(self):
         dtformat = '%Y-%m-%dT%H:%M:%S%z'
 
