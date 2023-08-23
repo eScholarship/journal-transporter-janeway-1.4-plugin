@@ -12,6 +12,9 @@ from submission.models import ArticleAuthorOrder
 import datetime
 from django.utils import timezone
 
+DTFORMAT = '%Y-%m-%dT%H:%M:%S%z'
+
+
 class TestJournalSerializerTest(TestCase):
 
     def setUp(self):
@@ -82,32 +85,77 @@ class ReviewAssignmentSerializerTest(TestCase):
         return s
 
     def test_date_requested(self):
-        dtformat = '%Y-%m-%dT%H:%M:%S%z'
-        date_assigned = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        date_assigned = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(DTFORMAT)
 
         s = self.validate_serializer({'date_assigned': date_assigned})
 
         a = s.save()
 
-        self.assertEqual(a.date_requested.strftime(dtformat), date_assigned)
+        self.assertEqual(a.date_requested.strftime(DTFORMAT), date_assigned)
         self.assertEqual(a.date_due.strftime("%Y-%m-%d"), "2023-01-01")
 
     def test_date_due(self):
         date_due = datetime.date(2023, 1, 1).strftime("%Y-%m-%d")
-        dtformat = '%Y-%m-%dT%H:%M:%S%z'
-        date_assigned = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        date_assigned = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone()).strftime(DTFORMAT)
         data = {"date_due": date_due, "date_assigned": date_assigned}
 
         s = self.validate_serializer(data)
 
         a = s.save()
-        self.assertEqual(a.date_requested.strftime(dtformat), date_assigned)
+        self.assertEqual(a.date_requested.strftime(DTFORMAT), date_assigned)
         self.assertEqual(a.date_due.strftime("%Y-%m-%d"), "2023-01-01")
 
     def test_no_dates(self):
         s = self.validate_serializer({})
         a = s.save()
         self.assertEqual(a.date_due.strftime("%Y-%m-%d"), datetime.date.today().strftime('%Y-%m-%d'))
+
+    def test_declined(self):
+        date_confirmed = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(DTFORMAT)
+        data = {"date_confirmed": date_confirmed, "declined": True}
+        s = self.validate_serializer(data)
+
+        a = s.save()
+
+        self.assertIsNone(a.date_accepted)
+        self.assertEqual(a.date_declined.strftime(DTFORMAT), date_confirmed)
+
+    def test_accepted(self):
+        date_confirmed = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(DTFORMAT)
+        data = {"date_confirmed": date_confirmed, "declined": False}
+        s = self.validate_serializer(data)
+
+        a = s.save()
+
+        self.assertIsNone(a.date_declined)
+        self.assertEqual(a.date_accepted.strftime(DTFORMAT), date_confirmed)
+
+    def test_accepted_default(self):
+        date_confirmed = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(DTFORMAT)
+        data = {"date_confirmed": date_confirmed}
+        s = self.validate_serializer(data)
+
+        a = s.save()
+
+        self.assertIsNone(a.date_declined)
+        self.assertEqual(a.date_accepted.strftime(DTFORMAT), date_confirmed)
+
+    def test_cancelled(self):
+        data = {"cancelled": True}
+        s = self.validate_serializer(data)
+        a = s.save()
+        self.assertEqual(a.decision, 'withdrawn')
+
+    def test_not_cancelled(self):
+        data = {"cancelled": False}
+        s = self.validate_serializer(data)
+        a = s.save()
+        self.assertIsNone(a.decision)
+
+    def test_cancelled_default(self):
+        s = self.validate_serializer({})
+        a = s.save()
+        self.assertIsNone(a.decision)
 
 class EditorAssignmentSerializerTest(TestCase):
 
@@ -128,9 +176,7 @@ class EditorAssignmentSerializerTest(TestCase):
         return s
 
     def test_is_editor(self):
-        dtformat = '%Y-%m-%dT%H:%M:%S%z'
-
-        assigned = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        assigned = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(DTFORMAT)
         data = {'editor_id': self.user.pk, 'date_notified': assigned, 'is_editor': False, 'notified': True}
         a = self.validate_serializer(data).save()
 
@@ -138,16 +184,14 @@ class EditorAssignmentSerializerTest(TestCase):
         self.assertEqual(a.article.pk, self.article.pk)
         self.assertEqual(a.editor_type, 'section-editor')
         self.assertEqual(a.notified, True)
-        self.assertEqual(a.assigned.strftime(dtformat), assigned)
+        self.assertEqual(a.assigned.strftime(DTFORMAT), assigned)
 
     def test_duplicates(self):
-        dtformat = '%Y-%m-%dT%H:%M:%S%z'
-
-        date_assigned1 = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        date_assigned1 = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(DTFORMAT)
         data1 = {'editor_id': self.user.pk, 'date_notified': date_assigned1, 'editor_type': "section-editor", 'notified': True}
         a1 = self.validate_serializer(data1).save()
 
-        date_assigned2 = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        date_assigned2 = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone()).strftime(DTFORMAT)
         data2 = {'editor_id': self.user.pk, 'date_notified': date_assigned2, 'editor_type': "editor", 'notified': False}
         a2 = self.validate_serializer(data2).save()
 
@@ -156,7 +200,7 @@ class EditorAssignmentSerializerTest(TestCase):
         self.assertEqual(a1.article.pk, self.article.pk)
         self.assertEqual(a1.editor_type, 'section-editor')
         self.assertEqual(a1.notified, True)
-        self.assertEqual(a1.assigned.strftime(dtformat), date_assigned1)
+        self.assertEqual(a1.assigned.strftime(DTFORMAT), date_assigned1)
 
 class ArticleSerializerTest(TestCase):
 

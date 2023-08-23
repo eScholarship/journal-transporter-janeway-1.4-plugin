@@ -1435,10 +1435,13 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
             "recommendation": "decision",
             "date_assigned": "date_requested",
             "date_due": "date_due",
-            "date_confirmed": "date_accepted",
+            "date_confirmed": "date_confirmed",
+            "date_accepted": "date_accepted",
             "date_declined": "date_declined",
             "date_completed": "date_complete",
             "date_reminded": "date_reminded",
+            "declined": "is_declined",
+            "cancelled": "is_cancelled",
             "responded": "is_complete",
             "comments": "comments_for_editor",
             "quality": "rating",
@@ -1471,10 +1474,13 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
     is_complete = BooleanField(**OPT_FIELD)
     date_assigned = DateTimeField(source="date_requested", **OPT_FIELD)
     date_due = DateField()
-    date_confirmed = DateTimeField(source="date_accepted", **OPT_FIELD)
+    date_confirmed = DateTimeField(**OPT_FIELD)
+    date_accepted = DateTimeField(**OPT_FIELD)
     date_declined = DateTimeField(**OPT_FIELD)
-    date_completed = DateTimeField(source="date_complete", **OPT_FIELD)
+    date_completed = DateTimeField(**OPT_FIELD)
     date_reminded = DateTimeField(**OPT_FIELD)
+    declined = BooleanField(source="is_declined", **OPT_FIELD)
+    cancelled = BooleanField(source="is_cancelled", **OPT_FIELD)
 
     reviewer_id = IntegerField(**OPT_FIELD)
     editor_id = IntegerField(**OPT_FIELD)
@@ -1488,7 +1494,6 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         return (rating.rating * 10) if rating else None
 
     def before_validation(self, data: dict):
-
         # Attempt to derive date_due
         if not data.get("date_due"):
             if data.get("date_completed"):
@@ -1510,6 +1515,17 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         data["comments"] = comment[0]["comments"] if isinstance(comment, list) and len(comment) > 0 else None
 
     def pre_process(self, data: dict):
+        is_declined = data.pop("is_declined", False)
+        date_confirmed = data.pop("date_confirmed", None)
+        if is_declined:
+            data["date_declined"] = date_confirmed
+        else:
+            data["date_accepted"] = date_confirmed
+
+        is_cancelled = data.pop("is_cancelled", False)
+        if is_cancelled:
+            data["decision"] = "withdrawn"
+
         # Handle various cancellation scenarios
         # If decision/recommendation is blank but review is completed, assume it's cancelled
         if data.get("date_complete") and not data.get("decision"):
