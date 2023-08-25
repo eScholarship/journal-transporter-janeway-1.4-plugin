@@ -12,6 +12,8 @@ from submission.models import ArticleAuthorOrder
 import datetime
 from django.utils import timezone
 
+from django.core.files.uploadedfile import SimpleUploadedFile
+
 DATETIME1 = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone())
 DATETIME2 = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone())
 
@@ -253,6 +255,42 @@ class AuthorAssignmentSerializerTest(TestCase):
 
         self.assertEqual(ArticleAuthorOrder.objects.filter(article=self.article, author=self.user).count(), 1)
         self.assertEqual(ArticleAuthorOrder.objects.get(article=self.article, author=self.user).order, 2)
+
+class ArticleFileSerializerTest(TestCase):
+
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+        self.article = helpers.create_article(self.journal)
+        self.user = helpers.create_user("author@test.edu")
+
+    def validate_serializer(self, data):
+        s = JournalArticleFileSerializer(data=data)
+        s.context["view"] = JournalArticleFileViewSet(kwargs={'parent_lookup_article__id': self.article.pk})
+        s.article = self.article
+
+        self.assertTrue(s.is_valid())
+        return s
+
+    def test_file_label(self):
+        pdf_file = SimpleUploadedFile("test.pdf", b"\x00\x01\x02\x03")
+        data = {"file": pdf_file,
+                "file_name":"56915-269222-3-SM.docx",
+                "file_type":"application\/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "original_filename":"Grit and resident well being West JEM.docx",
+                "date_uploaded":"2022-03-28T17:50:05+00:00",
+                "type":"submission\/original",
+                "round":1,
+                "parent_source_record_key":None,
+                "is_galley_file":False,
+                "is_supplementary_file":False,
+                "title":"",
+                "description":None,
+                "creator":None,"publisher":None,"source":None,"type_other":None}
+
+        s = self.validate_serializer(data)
+        f = s.save()
+
+        self.assertEqual(f.label, data["file_name"])
 
 class UserSerializerTest(TestCase):
     """

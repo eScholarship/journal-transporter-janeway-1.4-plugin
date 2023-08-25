@@ -1178,7 +1178,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
 
 class JournalArticleFileSerializer(TransporterSerializer):
     """
-    Transporter serializer for article files (/journals/{id}/arti8cles/{id}/files).
+    Transporter serializer for article files (/journals/{id}/articles/{id}/files).
 
     Maps to core.models.File and attaches to appropriate Article. Also handles building
     file history if parent file is defined.
@@ -1222,7 +1222,7 @@ class JournalArticleFileSerializer(TransporterSerializer):
                 file = files.overwrite_file(raw_file, file_to_be_replaced, ('articles', self.article.pk))
         else:
             label_fields = ["label", "filename", "file_name", "original_filename"]
-            label = [data.get(field) for field in label_fields if data.get(field)][0]
+            label = [self.initial_data.get(field) for field in label_fields if self.initial_data.get(field)][0]
             file = files.save_file_to_article(raw_file,
                                               self.article,
                                               None,
