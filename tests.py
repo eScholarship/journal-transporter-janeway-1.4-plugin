@@ -3,7 +3,7 @@ from django.test import TestCase
 from .serializers import *
 from .views import *
 
-from core.models import Account, Interest
+from core.models import Account, Interest, File, SupplementaryFile
 from review.models import ReviewRound, EditorAssignment
 from utils.testing import helpers
 from utils import setting_handler
@@ -161,6 +161,35 @@ class ReviewAssignmentSerializerTest(TestCase):
         s = self.validate_serializer({})
         a = s.save()
         self.assertIsNone(a.decision)
+
+    def test_supp_files(self):
+        reviewer = helpers.create_user("reviewer@test.edu")
+        editor = helpers.create_user("ed@test.edu")
+        round, _ = ReviewRound.objects.get_or_create(article=self.article, round_number=1)
+
+        review_file = File.objects.create(article_id=self.article.pk,
+                                          mime_type="application/pdf",
+                                          original_filename="test.pdf",
+                                          uuid_filename="0000.pdf",
+                                          label="Test Review File",
+                                          sequence=1)
+        other_file = File.objects.create(article_id=self.article.pk,
+                                          mime_type="application/pdf",
+                                          original_filename="test.pdf",
+                                          uuid_filename="0000.pdf",
+                                          label="Test Supplementary File",
+                                          sequence=1)
+        supp_file = SupplementaryFile.objects.create(file=other_file)
+        data = {"reviewer_id": reviewer.pk,
+                "editor_id": editor.pk,
+                "round_review_file_ids": [review_file.pk],
+                "supplementary_file_ids": [supp_file.file.pk]}
+        s = self.validate_serializer(data)
+        s.validated_data['review_round_id'] = round.pk
+        a = s.save()
+
+        self.assertEquals(a.review_round.review_files.count(), 2)
+
 
 class EditorAssignmentSerializerTest(TestCase):
 
