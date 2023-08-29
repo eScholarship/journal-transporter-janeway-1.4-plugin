@@ -1346,7 +1346,7 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
             "rejected": None,
             "declined": None,
             "decline": None,
-            "resubmit": None,
+            "resubmit": "major_revisions",
             "major_revisions": "major_revisions",
             "minor_revisions": "minor_revisions",
             "revisions": "minor_revisions",

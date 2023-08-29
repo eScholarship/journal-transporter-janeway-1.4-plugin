@@ -72,6 +72,35 @@ class ReviewRoundASerializerTest(TestCase):
 
         self.assertEqual(to_datetime_str(round.date_started), date_started)
 
+class RevisionRequestSerializerTest(TestCase):
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+        self.article = helpers.create_article(self.journal)
+
+    def validate_serializer(self, data):
+        s = JournalArticleRevisionRequestSerializer(data=data)
+        s.context["view"] = JournalArticleRevisionRequestViewSet(kwargs={})
+
+        self.assertTrue(s.is_valid())
+        # typically this is set by the view but since we're
+        # circumventing that just set it manually
+        s.validated_data['article_id'] = self.article.pk
+        return s
+
+    def test_resubmit(self):
+        editor = helpers.create_user("ed@test.edu")
+        data = {"decision":"resubmit",
+                "comment": "This is the reviewer comment",
+                "date":"2022-10-21T02:22:38+00:00",
+                "date_requested":"2022-10-30T02:22:38+00:00",
+                "editor_id": editor.pk}
+        s = self.validate_serializer(data)
+        revision = s.save()
+
+        self.assertEqual(revision.type, "major_revisions")
+        self.assertEqual(revision.article, self.article)
+        self.assertEqual(revision.editor, editor)
+
 class ReviewAssignmentSerializerTest(TestCase):
 
     def setUp(self):
