@@ -1221,7 +1221,8 @@ class JournalArticleFileSerializer(TransporterSerializer):
             file_to_be_replaced_pk = self.initial_data.get("parent_target_record_key").split(":")[-1]
             file_to_be_replaced = File.objects.get(pk=file_to_be_replaced_pk)
             if file_to_be_replaced:
-                # TODO: Is this the best way to do this? Is "overwriting" correct?
+                # use the overwrite_file method for creating a file history
+                # but maintain the file_name/label from OJS
                 file = files.overwrite_file(raw_file, file_to_be_replaced, ('articles', self.article.pk))
                 file.label = label
                 file.save()
