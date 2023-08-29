@@ -1213,6 +1213,9 @@ class JournalArticleFileSerializer(TransporterSerializer):
 
         raw_file = data.pop("file")
 
+        label_fields = ["label", "filename", "file_name", "original_filename"]
+        label = [self.initial_data.get(field) for field in label_fields if self.initial_data.get(field)][0]
+
         # If the file has a parent, then it belongs in the file history
         if self.initial_data.get("parent_target_record_key"):
             file_to_be_replaced_pk = self.initial_data.get("parent_target_record_key").split(":")[-1]
@@ -1220,9 +1223,9 @@ class JournalArticleFileSerializer(TransporterSerializer):
             if file_to_be_replaced:
                 # TODO: Is this the best way to do this? Is "overwriting" correct?
                 file = files.overwrite_file(raw_file, file_to_be_replaced, ('articles', self.article.pk))
+                file.label = label
+                file.save()
         else:
-            label_fields = ["label", "filename", "file_name", "original_filename"]
-            label = [self.initial_data.get(field) for field in label_fields if self.initial_data.get(field)][0]
             file = files.save_file_to_article(raw_file,
                                               self.article,
                                               None,

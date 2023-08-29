@@ -321,6 +321,29 @@ class ArticleFileSerializerTest(TestCase):
 
         self.assertEqual(f.label, data["file_name"])
 
+    def test_file_history_label(self):
+        parent_file = File.objects.create(article_id=self.article.pk,
+                                          mime_type="application/pdf",
+                                          original_filename="parent_file.pdf",
+                                          uuid_filename="0000.pdf",
+                                          label="Parent File Label",
+                                          sequence=1)
+
+        pdf_file = SimpleUploadedFile("test.pdf", b"\x00\x01\x02\x03")
+        data = {"file": pdf_file,
+                "file_name":"file_name.pdf",
+                "file_type":"application/pdf",
+                "original_filename":"original_filename.pdf",
+                "date_uploaded":"2022-03-28T17:50:05+00:00",
+                "type":"submission/original",
+                "round":1,
+                "parent_target_record_key":f"ArticleFile:{self.article.pk}:{parent_file.pk}"}
+
+        s = self.validate_serializer(data)
+        f = s.save()
+
+        self.assertEqual(f.label, data["file_name"])
+
 class UserSerializerTest(TestCase):
     """
     Test UserSerializer
