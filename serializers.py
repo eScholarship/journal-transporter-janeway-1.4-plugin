@@ -392,6 +392,7 @@ class UserSerializer(TransporterSerializer):
             # save this user to a variable and return it after post_process
             user_to_return = existing
         except Account.DoesNotExist:
+            validated_data["is_active"] = True
             user_to_return = super().create(validated_data)
         # because we've overridden the create method, we need to call the
         # post_process method manually
@@ -938,6 +939,12 @@ class JournalArticleSerializer(TransporterSerializer):
 
             article.save()
 
+        # override auto_now_add for date_started
+        date_started = data.get("date_started", None)
+        if date_started:
+            article.date_started = date_started
+            article.save()
+
         # Assign custom field values
         self.assign_custom_field_values(article)
 
@@ -1040,7 +1047,8 @@ class JournalArticleEditorSerializer(TransporterSerializer):
             "notified": "notified",
             "date_notified": "assigned",
             "editor_type": "editor_type",
-            "editor_id": "editor_id"
+            "editor_id": "editor_id",
+            "is_editor": "is_editor"
         }
         foreign_keys = {
             "editor": "editor_id"
@@ -1049,19 +1057,18 @@ class JournalArticleEditorSerializer(TransporterSerializer):
 
     notified = BooleanField(**OPT_FIELD)
     date_notified = DateTimeField(source="assigned", **OPT_FIELD)
-    editor_type = CharField(default="editor", **OPT_STR_FIELD)
+    editor_type = CharField(**OPT_STR_FIELD)
 
     editor_id = IntegerField()
+    is_editor = BooleanField(**OPT_FIELD)
 
     def pre_process(self, data: dict):
         data["notified"] = bool(data.get("assigned"))
         data["assigned"] = data.get("assigned") or self.article.date_submitted or datetime.now()
+        is_editor = data.pop("is_editor", True)
+
         if not data.get("editor_type"):
-            role = Role.objects.filter(slug="editor")
-            if role:
-                user = Account.objects.get(pk=data.get("editor_id"))
-                has_editor_role = AccountRole.objects.filter(user=user, role=role).exists()
-                data["editor_type"] = "editor" if has_editor_role else "section-editor"
+            data["editor_type"] = "editor" if is_editor else "section-editor"
 
     # get_or_create doesn't work properly finding items that use unique_together
     # recommended solution is to pass data with only unique_together items and
@@ -1155,7 +1162,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
             ArticleAuthorOrder.objects.get_or_create(
                 article=self.article,
                 author=record.author,
-                order=self.initial_data.get("sequence", self.article.authors.count() + 1)
+                defaults={"order": self.initial_data.get("sequence", self.article.authors.count() + 1)}
             )
 
             # Primary contact is not a model attr, so look it up in the initial (unvalidated) data.
@@ -1172,7 +1179,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
 
 class JournalArticleFileSerializer(TransporterSerializer):
     """
-    Transporter serializer for article files (/journals/{id}/arti8cles/{id}/files).
+    Transporter serializer for article files (/journals/{id}/articles/{id}/files).
 
     Maps to core.models.File and attaches to appropriate Article. Also handles building
     file history if parent file is defined.
@@ -1207,16 +1214,20 @@ class JournalArticleFileSerializer(TransporterSerializer):
 
         raw_file = data.pop("file")
 
+        label_fields = ["label", "filename", "file_name", "original_filename"]
+        label = [self.initial_data.get(field) for field in label_fields if self.initial_data.get(field)][0]
+
         # If the file has a parent, then it belongs in the file history
         if self.initial_data.get("parent_target_record_key"):
             file_to_be_replaced_pk = self.initial_data.get("parent_target_record_key").split(":")[-1]
             file_to_be_replaced = File.objects.get(pk=file_to_be_replaced_pk)
             if file_to_be_replaced:
-                # TODO: Is this the best way to do this? Is "overwriting" correct?
+                # use the overwrite_file method for creating a file history
+                # but maintain the file_name/label from OJS
                 file = files.overwrite_file(raw_file, file_to_be_replaced, ('articles', self.article.pk))
+                file.label = label
+                file.save()
         else:
-            label_fields = ["label", "filename", "file_name", "original_filename"]
-            label = [data.get(field) for field in label_fields if data.get(field)][0]
             file = files.save_file_to_article(raw_file,
                                               self.article,
                                               None,
@@ -1337,7 +1348,7 @@ class JournalArticleRevisionRequestSerializer(TransporterSerializer):
             "rejected": None,
             "declined": None,
             "decline": None,
-            "resubmit": None,
+            "resubmit": "major_revisions",
             "major_revisions": "major_revisions",
             "minor_revisions": "minor_revisions",
             "revisions": "minor_revisions",
@@ -1402,6 +1413,11 @@ class JournalArticleRoundSerializer(TransporterSerializer):
                                            element=workflow_element,
                                            timestamp=(review_round.article.date_submitted or review_round.date_started))
 
+        # override auto_now_add for date_started
+        date_started = data.get("date_started", None)
+        if date_started:
+            review_round.date_started = date_started
+            review_round.save()
 
 class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
     """
@@ -1424,10 +1440,13 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
             "recommendation": "decision",
             "date_assigned": "date_requested",
             "date_due": "date_due",
-            "date_confirmed": "date_accepted",
+            "date_confirmed": "date_confirmed",
+            "date_accepted": "date_accepted",
             "date_declined": "date_declined",
             "date_completed": "date_complete",
             "date_reminded": "date_reminded",
+            "declined": "is_declined",
+            "cancelled": "is_cancelled",
             "responded": "is_complete",
             "comments": "comments_for_editor",
             "quality": "rating",
@@ -1460,10 +1479,13 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
     is_complete = BooleanField(**OPT_FIELD)
     date_assigned = DateTimeField(source="date_requested", **OPT_FIELD)
     date_due = DateField()
-    date_confirmed = DateTimeField(source="date_accepted", **OPT_FIELD)
+    date_confirmed = DateTimeField(**OPT_FIELD)
+    date_accepted = DateTimeField(**OPT_FIELD)
     date_declined = DateTimeField(**OPT_FIELD)
-    date_completed = DateTimeField(source="date_complete", **OPT_FIELD)
+    date_completed = DateTimeField(**OPT_FIELD)
     date_reminded = DateTimeField(**OPT_FIELD)
+    declined = BooleanField(source="is_declined", **OPT_FIELD)
+    cancelled = BooleanField(source="is_cancelled", **OPT_FIELD)
 
     reviewer_id = IntegerField(**OPT_FIELD)
     editor_id = IntegerField(**OPT_FIELD)
@@ -1477,7 +1499,6 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         return (rating.rating * 10) if rating else None
 
     def before_validation(self, data: dict):
-
         # Attempt to derive date_due
         if not data.get("date_due"):
             if data.get("date_completed"):
@@ -1499,6 +1520,17 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         data["comments"] = comment[0]["comments"] if isinstance(comment, list) and len(comment) > 0 else None
 
     def pre_process(self, data: dict):
+        is_declined = data.pop("is_declined", False)
+        date_confirmed = data.pop("date_confirmed", None)
+        if is_declined:
+            data["date_declined"] = date_confirmed
+        else:
+            data["date_accepted"] = date_confirmed
+
+        is_cancelled = data.pop("is_cancelled", False)
+        if is_cancelled:
+            data["decision"] = "withdrawn"
+
         # Handle various cancellation scenarios
         # If decision/recommendation is blank but review is completed, assume it's cancelled
         if data.get("date_complete") and not data.get("decision"):
@@ -1536,11 +1568,10 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         if supplementary_file_ids and len(supplementary_file_ids):
             already_added = review_assignment.review_round.review_files.filter(pk__in=supplementary_file_ids)
             already_added_pks = [file.pk for file in already_added]
-            to_add = set(already_added_pks) - set(supplementary_file_ids)
+            to_add = set(supplementary_file_ids) - set(already_added_pks)
             for file_id in to_add:
                 file = File.objects.get(pk=file_id)
                 review_assignment.review_round.review_files.add(file)
-
 
 class JournalArticleRoundAssignmentResponseSerializer(TransporterSerializer):
     """

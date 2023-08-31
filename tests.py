@@ -3,7 +3,7 @@ from django.test import TestCase
 from .serializers import *
 from .views import *
 
-from core.models import Account, Interest
+from core.models import Account, Interest, File, SupplementaryFile
 from review.models import ReviewRound, EditorAssignment
 from utils.testing import helpers
 from utils import setting_handler
@@ -11,6 +11,14 @@ from submission.models import ArticleAuthorOrder
 
 import datetime
 from django.utils import timezone
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+DATETIME1 = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone())
+DATETIME2 = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone())
+
+def to_datetime_str(dt):
+    return dt.strftime('%Y-%m-%dT%H:%M:%S%z')
 
 class TestJournalSerializerTest(TestCase):
 
@@ -41,6 +49,58 @@ class TestJournalSerializerTest(TestCase):
 
         self.assertEqual(setting_handler.get_setting('general', 'copyright_notice', j).value, notice)
 
+class ReviewRoundASerializerTest(TestCase):
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+        self.article = helpers.create_article(self.journal)
+
+    def validate_serializer(self, data):
+        s = JournalArticleRoundSerializer(data=data)
+        s.context["view"] = JournalArticleRoundViewSet(kwargs={})
+
+        self.assertTrue(s.is_valid())
+        # typically this is set by the view but since we're
+        # circumventing that just set it manually
+        s.validated_data['article_id'] = self.article.pk
+        return s
+
+    def test_date_started(self):
+        date_started = "2022-03-28T18:03:34+0000"
+        data = {'round': 1, 'date': date_started}
+        s = self.validate_serializer(data)
+        round = s.save()
+
+        self.assertEqual(to_datetime_str(round.date_started), date_started)
+
+class RevisionRequestSerializerTest(TestCase):
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+        self.article = helpers.create_article(self.journal)
+
+    def validate_serializer(self, data):
+        s = JournalArticleRevisionRequestSerializer(data=data)
+        s.context["view"] = JournalArticleRevisionRequestViewSet(kwargs={})
+
+        self.assertTrue(s.is_valid())
+        # typically this is set by the view but since we're
+        # circumventing that just set it manually
+        s.validated_data['article_id'] = self.article.pk
+        return s
+
+    def test_resubmit(self):
+        editor = helpers.create_user("ed@test.edu")
+        data = {"decision":"resubmit",
+                "comment": "This is the reviewer comment",
+                "date":"2022-10-21T02:22:38+00:00",
+                "date_requested":"2022-10-30T02:22:38+00:00",
+                "editor_id": editor.pk}
+        s = self.validate_serializer(data)
+        revision = s.save()
+
+        self.assertEqual(revision.type, "major_revisions")
+        self.assertEqual(revision.article, self.article)
+        self.assertEqual(revision.editor, editor)
+
 class ReviewAssignmentSerializerTest(TestCase):
 
     def setUp(self):
@@ -59,32 +119,106 @@ class ReviewAssignmentSerializerTest(TestCase):
         return s
 
     def test_date_requested(self):
-        dtformat = '%Y-%m-%dT%H:%M:%S%z'
-        date_assigned = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        date_assigned = to_datetime_str(DATETIME1)
 
         s = self.validate_serializer({'date_assigned': date_assigned})
 
         a = s.save()
 
-        self.assertEqual(a.date_requested.strftime(dtformat), date_assigned)
+        self.assertEqual(to_datetime_str(a.date_requested), date_assigned)
         self.assertEqual(a.date_due.strftime("%Y-%m-%d"), "2023-01-01")
 
     def test_date_due(self):
         date_due = datetime.date(2023, 1, 1).strftime("%Y-%m-%d")
-        dtformat = '%Y-%m-%dT%H:%M:%S%z'
-        date_assigned = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        date_assigned = to_datetime_str(DATETIME2)
         data = {"date_due": date_due, "date_assigned": date_assigned}
 
         s = self.validate_serializer(data)
 
         a = s.save()
-        self.assertEqual(a.date_requested.strftime(dtformat), date_assigned)
+        self.assertEqual(to_datetime_str(a.date_requested), date_assigned)
         self.assertEqual(a.date_due.strftime("%Y-%m-%d"), "2023-01-01")
 
     def test_no_dates(self):
         s = self.validate_serializer({})
         a = s.save()
         self.assertEqual(a.date_due.strftime("%Y-%m-%d"), datetime.date.today().strftime('%Y-%m-%d'))
+
+    def test_declined(self):
+        date_confirmed = to_datetime_str(DATETIME1)
+        data = {"date_confirmed": date_confirmed, "declined": True}
+        s = self.validate_serializer(data)
+
+        a = s.save()
+
+        self.assertIsNone(a.date_accepted)
+        self.assertEqual(to_datetime_str(a.date_declined), date_confirmed)
+
+    def test_accepted(self):
+        date_confirmed = to_datetime_str(DATETIME1)
+        data = {"date_confirmed": date_confirmed, "declined": False}
+        s = self.validate_serializer(data)
+
+        a = s.save()
+
+        self.assertIsNone(a.date_declined)
+        self.assertEqual(to_datetime_str(a.date_accepted), date_confirmed)
+
+    def test_accepted_default(self):
+        date_confirmed = to_datetime_str(DATETIME1)
+        data = {"date_confirmed": date_confirmed}
+        s = self.validate_serializer(data)
+
+        a = s.save()
+
+        self.assertIsNone(a.date_declined)
+        self.assertEqual(to_datetime_str(a.date_accepted), date_confirmed)
+
+    def test_cancelled(self):
+        data = {"cancelled": True}
+        s = self.validate_serializer(data)
+        a = s.save()
+        self.assertEqual(a.decision, 'withdrawn')
+
+    def test_not_cancelled(self):
+        data = {"cancelled": False}
+        s = self.validate_serializer(data)
+        a = s.save()
+        self.assertIsNone(a.decision)
+
+    def test_cancelled_default(self):
+        s = self.validate_serializer({})
+        a = s.save()
+        self.assertIsNone(a.decision)
+
+    def test_supp_files(self):
+        reviewer = helpers.create_user("reviewer@test.edu")
+        editor = helpers.create_user("ed@test.edu")
+        round, _ = ReviewRound.objects.get_or_create(article=self.article, round_number=1)
+
+        review_file = File.objects.create(article_id=self.article.pk,
+                                          mime_type="application/pdf",
+                                          original_filename="test.pdf",
+                                          uuid_filename="0000.pdf",
+                                          label="Test Review File",
+                                          sequence=1)
+        other_file = File.objects.create(article_id=self.article.pk,
+                                          mime_type="application/pdf",
+                                          original_filename="test.pdf",
+                                          uuid_filename="0000.pdf",
+                                          label="Test Supplementary File",
+                                          sequence=1)
+        supp_file = SupplementaryFile.objects.create(file=other_file)
+        data = {"reviewer_id": reviewer.pk,
+                "editor_id": editor.pk,
+                "round_review_file_ids": [review_file.pk],
+                "supplementary_file_ids": [supp_file.file.pk]}
+        s = self.validate_serializer(data)
+        s.validated_data['review_round_id'] = round.pk
+        a = s.save()
+
+        self.assertEquals(a.review_round.review_files.count(), 2)
+
 
 class EditorAssignmentSerializerTest(TestCase):
 
@@ -104,14 +238,23 @@ class EditorAssignmentSerializerTest(TestCase):
         s.validated_data['article_id'] = self.article.pk
         return s
 
-    def test_duplicates(self):
-        dtformat = '%Y-%m-%dT%H:%M:%S%z'
+    def test_is_editor(self):
+        assigned = to_datetime_str(DATETIME1)
+        data = {'editor_id': self.user.pk, 'date_notified': assigned, 'is_editor': False, 'notified': True}
+        a = self.validate_serializer(data).save()
 
-        date_assigned1 = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        self.assertEqual(a.editor.pk, self.user.pk)
+        self.assertEqual(a.article.pk, self.article.pk)
+        self.assertEqual(a.editor_type, 'section-editor')
+        self.assertEqual(a.notified, True)
+        self.assertEqual(to_datetime_str(a.assigned), assigned)
+
+    def test_duplicates(self):
+        date_assigned1 = to_datetime_str(DATETIME1)
         data1 = {'editor_id': self.user.pk, 'date_notified': date_assigned1, 'editor_type': "section-editor", 'notified': True}
         a1 = self.validate_serializer(data1).save()
 
-        date_assigned2 = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone()).strftime(dtformat)
+        date_assigned2 = to_datetime_str(DATETIME2)
         data2 = {'editor_id': self.user.pk, 'date_notified': date_assigned2, 'editor_type': "editor", 'notified': False}
         a2 = self.validate_serializer(data2).save()
 
@@ -120,7 +263,27 @@ class EditorAssignmentSerializerTest(TestCase):
         self.assertEqual(a1.article.pk, self.article.pk)
         self.assertEqual(a1.editor_type, 'section-editor')
         self.assertEqual(a1.notified, True)
-        self.assertEqual(a1.assigned.strftime(dtformat), date_assigned1)
+        self.assertEqual(to_datetime_str(a1.assigned), date_assigned1)
+
+class ArticleSerializerTest(TestCase):
+
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+
+    def validate_serializer(self, data):
+        s = JournalArticleSerializer(data=data)
+        s.context["view"] = JournalArticleViewSet(kwargs={})
+        s.journal = self.journal
+        self.assertTrue(s.is_valid())
+        return s
+
+    def test_date_started(self):
+        date_started = "2022-03-28T18:03:34+0000"
+        data = {'title': "Title 1", 'date_started': date_started}
+        s = self.validate_serializer(data)
+        article = s.save()
+
+        self.assertEqual(to_datetime_str(article.date_started), date_started)
 
 class AuthorAssignmentSerializerTest(TestCase):
 
@@ -141,13 +304,74 @@ class AuthorAssignmentSerializerTest(TestCase):
         return s
 
     def test_multiple_objects(self):
-        data = {'user_id': self.user.pk, 'email': self.user.email, 'first_name': 'Author', 'last_name': 'Test', 'sequence': 1}
+        data = {'user_id': self.user.pk, 'email': self.user.email, 'first_name': 'Author', 'last_name': 'Test', 'sequence': 2}
         s = self.validate_serializer(data)
         a1 = s.save()
+        data['sequence'] = 3
         s = self.validate_serializer(data)
         a2 = s.save()
 
-        self.assertEqual(ArticleAuthorOrder.objects.filter(article=self.article, author=self.user, order=1).count(), 1)
+        self.assertEqual(ArticleAuthorOrder.objects.filter(article=self.article, author=self.user).count(), 1)
+        self.assertEqual(ArticleAuthorOrder.objects.get(article=self.article, author=self.user).order, 2)
+
+class ArticleFileSerializerTest(TestCase):
+
+    def setUp(self):
+        self.journal, _ = helpers.create_journals()
+        self.article = helpers.create_article(self.journal)
+        self.user = helpers.create_user("author@test.edu")
+
+    def validate_serializer(self, data):
+        s = JournalArticleFileSerializer(data=data)
+        s.context["view"] = JournalArticleFileViewSet(kwargs={'parent_lookup_article__id': self.article.pk})
+        s.article = self.article
+
+        self.assertTrue(s.is_valid())
+        return s
+
+    def test_file_label(self):
+        pdf_file = SimpleUploadedFile("test.pdf", b"\x00\x01\x02\x03")
+        data = {"file": pdf_file,
+                "file_name":"56915-269222-3-SM.docx",
+                "file_type":"application\/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "original_filename":"Grit and resident well being West JEM.docx",
+                "date_uploaded":"2022-03-28T17:50:05+00:00",
+                "type":"submission\/original",
+                "round":1,
+                "parent_source_record_key":None,
+                "is_galley_file":False,
+                "is_supplementary_file":False,
+                "title":"",
+                "description":None,
+                "creator":None,"publisher":None,"source":None,"type_other":None}
+
+        s = self.validate_serializer(data)
+        f = s.save()
+
+        self.assertEqual(f.label, data["file_name"])
+
+    def test_file_history_label(self):
+        parent_file = File.objects.create(article_id=self.article.pk,
+                                          mime_type="application/pdf",
+                                          original_filename="parent_file.pdf",
+                                          uuid_filename="0000.pdf",
+                                          label="Parent File Label",
+                                          sequence=1)
+
+        pdf_file = SimpleUploadedFile("test.pdf", b"\x00\x01\x02\x03")
+        data = {"file": pdf_file,
+                "file_name":"file_name.pdf",
+                "file_type":"application/pdf",
+                "original_filename":"original_filename.pdf",
+                "date_uploaded":"2022-03-28T17:50:05+00:00",
+                "type":"submission/original",
+                "round":1,
+                "parent_target_record_key":f"ArticleFile:{self.article.pk}:{parent_file.pk}"}
+
+        s = self.validate_serializer(data)
+        f = s.save()
+
+        self.assertEqual(f.label, data["file_name"])
 
 class UserSerializerTest(TestCase):
     """
@@ -166,6 +390,7 @@ class UserSerializerTest(TestCase):
         self.assertEqual(user.email, valid_user_data['email'])
         self.assertEqual(user.first_name, valid_user_data['first_name'])
         self.assertEqual(user.last_name, valid_user_data['last_name'])
+        self.assertTrue(user.is_active)
 
     def test_user_serializer_invalid_user_missing_email(self):
         user_data = {"username": "invalid_user", "email": "", "first_name": "Sam", "last_name": "Sam"}
