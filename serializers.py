@@ -392,6 +392,7 @@ class UserSerializer(TransporterSerializer):
             # save this user to a variable and return it after post_process
             user_to_return = existing
         except Account.DoesNotExist:
+            validated_data["is_active"] = True
             user_to_return = super().create(validated_data)
         # because we've overridden the create method, we need to call the
         # post_process method manually

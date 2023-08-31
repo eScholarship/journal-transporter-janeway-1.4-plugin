@@ -390,6 +390,7 @@ class UserSerializerTest(TestCase):
         self.assertEqual(user.email, valid_user_data['email'])
         self.assertEqual(user.first_name, valid_user_data['first_name'])
         self.assertEqual(user.last_name, valid_user_data['last_name'])
+        self.assertTrue(user.is_active)
 
     def test_user_serializer_invalid_user_missing_email(self):
         user_data = {"username": "invalid_user", "email": "", "first_name": "Sam", "last_name": "Sam"}
