@@ -1567,14 +1567,15 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
                     review_assignment.review_round.review_files.add(file)
 
         # Attach supplementary files to the round, if not done already
-        supplementary_file_ids = self.initial_data.get("supplementary_file_ids")
-        if supplementary_file_ids and len(supplementary_file_ids):
+        supplementary_file_ids = [i for i in self.initial_data.get("supplementary_file_ids", []) if i is not None]
+        if supplementary_file_ids and len(supplementary_file_ids) > 0:
             already_added = review_assignment.review_round.review_files.filter(pk__in=supplementary_file_ids)
             already_added_pks = [file.pk for file in already_added]
             to_add = set(supplementary_file_ids) - set(already_added_pks)
             for file_id in to_add:
-                file = File.objects.get(pk=file_id)
-                review_assignment.review_round.review_files.add(file)
+                if File.objects.filter(pk=file_id).exists():
+                    file = File.objects.get(pk=file_id)
+                    review_assignment.review_round.review_files.add(file)
 
 class JournalArticleRoundAssignmentResponseSerializer(TransporterSerializer):
     """
