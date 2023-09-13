@@ -388,6 +388,8 @@ class UserSerializer(TransporterSerializer):
         # Do not modify existing users; return existing user (lookup by email) if present.
         try:
             existing = Account.objects.get(email=validated_data["email"].lower())
+            existing.is_active = True
+            existing.save()
             # don't return yet, we need to run the post_process method, so
             # save this user to a variable and return it after post_process
             user_to_return = existing
