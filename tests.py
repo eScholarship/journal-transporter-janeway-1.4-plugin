@@ -329,6 +329,26 @@ class ArticleFileSerializerTest(TestCase):
         self.assertTrue(s.is_valid())
         return s
 
+    def test_supp_file(self):
+        pdf_file = SimpleUploadedFile("test.pdf", b"\x00\x01\x02\x03")
+        data = {"file": pdf_file,
+                "file_name":"56915-269222-3-SM.docx",
+                "file_type":"application\/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "original_filename":"Grit and resident well being West JEM.docx",
+                "date_uploaded":"2022-03-28T17:50:05+00:00",
+                "type":"supp",
+                "round":1,
+                "parent_source_record_key":None,
+                "is_galley_file":False,
+                "is_supplementary_file":True}
+
+        s = self.validate_serializer(data)
+        f = s.save()
+
+        self.assertEqual(SupplementaryFile.objects.filter(file=f).count(), 1)
+        self.assertEqual(self.article.supplementary_files.count(), 1)
+        self.assertEqual(self.article.manuscript_files.count(), 0)
+
     def test_file_label(self):
         pdf_file = SimpleUploadedFile("test.pdf", b"\x00\x01\x02\x03")
         data = {"file": pdf_file,
