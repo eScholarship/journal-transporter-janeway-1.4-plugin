@@ -392,6 +392,20 @@ class UserSerializerTest(TestCase):
         self.assertEqual(user.last_name, valid_user_data['last_name'])
         self.assertTrue(user.is_active)
 
+    def test_existing_user_active(self):
+        user = helpers.create_user("user@test.edu")
+        self.assertFalse(user.is_active)
+
+        data = {"email": "user@test.edu", "first_name": "User", "last_name": "One"}
+        serializer = UserSerializer(data=data)
+        serializer.context["view"] = UserViewSet(kwargs={})
+
+        self.assertTrue(serializer.is_valid())
+
+        user = serializer.save()
+
+        self.assertTrue(user.is_active)
+
     def test_user_serializer_invalid_user_missing_email(self):
         user_data = {"username": "invalid_user", "email": "", "first_name": "Sam", "last_name": "Sam"}
         serializer = UserSerializer(data=user_data)
