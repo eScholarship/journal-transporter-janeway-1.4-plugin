@@ -20,7 +20,7 @@ from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAss
                            ReviewAssignmentAnswer, ReviewerRating, EditorAssignment,
                            RevisionRequest)
 from core.models import Account, AccountRole, Country, File, Galley, Interest, Role, WorkflowElement, \
-    WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES
+    WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES, SupplementaryFile
 from utils.models import LogEntry
 from identifiers.models import Identifier
 from core import files
@@ -1247,8 +1247,9 @@ class JournalArticleFileSerializer(TransporterSerializer):
             Galley.objects.create(article=self.article, file=record)
 
         # Add file to appropriate collection
-        if data.get("is_supplementary_file"):
-            self.article.supplementary_files.add(record)
+        if self.initial_data.get("is_supplementary_file"):
+            supp_file = SupplementaryFile.objects.create(file=record)
+            self.article.supplementary_files.add(supp_file)
         elif not data.get("parent_target_record_key"):
             self.article.manuscript_files.add(record)
 
