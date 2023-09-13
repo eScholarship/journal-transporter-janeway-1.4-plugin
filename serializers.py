@@ -1482,7 +1482,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
     date_confirmed = DateTimeField(**OPT_FIELD)
     date_accepted = DateTimeField(**OPT_FIELD)
     date_declined = DateTimeField(**OPT_FIELD)
-    date_completed = DateTimeField(**OPT_FIELD)
+    date_completed = DateTimeField(source="date_complete", **OPT_FIELD)
     date_reminded = DateTimeField(**OPT_FIELD)
     declined = BooleanField(source="is_declined", **OPT_FIELD)
     cancelled = BooleanField(source="is_cancelled", **OPT_FIELD)
