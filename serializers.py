@@ -20,7 +20,7 @@ from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAss
                            ReviewAssignmentAnswer, ReviewerRating, EditorAssignment,
                            RevisionRequest)
 from core.models import Account, AccountRole, Country, File, Galley, Interest, Role, WorkflowElement, \
-    WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES
+    WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES, SupplementaryFile
 from utils.models import LogEntry
 from identifiers.models import Identifier
 from core import files
@@ -388,6 +388,8 @@ class UserSerializer(TransporterSerializer):
         # Do not modify existing users; return existing user (lookup by email) if present.
         try:
             existing = Account.objects.get(email=validated_data["email"].lower())
+            existing.is_active = True
+            existing.save()
             # don't return yet, we need to run the post_process method, so
             # save this user to a variable and return it after post_process
             user_to_return = existing
@@ -1245,8 +1247,9 @@ class JournalArticleFileSerializer(TransporterSerializer):
             Galley.objects.create(article=self.article, file=record)
 
         # Add file to appropriate collection
-        if data.get("is_supplementary_file"):
-            self.article.supplementary_files.add(record)
+        if self.initial_data.get("is_supplementary_file"):
+            supp_file = SupplementaryFile.objects.create(file=record)
+            self.article.supplementary_files.add(supp_file)
         elif not data.get("parent_target_record_key"):
             self.article.manuscript_files.add(record)
 
@@ -1482,7 +1485,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
     date_confirmed = DateTimeField(**OPT_FIELD)
     date_accepted = DateTimeField(**OPT_FIELD)
     date_declined = DateTimeField(**OPT_FIELD)
-    date_completed = DateTimeField(**OPT_FIELD)
+    date_completed = DateTimeField(source="date_complete", **OPT_FIELD)
     date_reminded = DateTimeField(**OPT_FIELD)
     declined = BooleanField(source="is_declined", **OPT_FIELD)
     cancelled = BooleanField(source="is_cancelled", **OPT_FIELD)
@@ -1564,14 +1567,15 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
                     review_assignment.review_round.review_files.add(file)
 
         # Attach supplementary files to the round, if not done already
-        supplementary_file_ids = self.initial_data.get("supplementary_file_ids")
-        if supplementary_file_ids and len(supplementary_file_ids):
+        supplementary_file_ids = [i for i in self.initial_data.get("supplementary_file_ids", []) if i is not None]
+        if supplementary_file_ids and len(supplementary_file_ids) > 0:
             already_added = review_assignment.review_round.review_files.filter(pk__in=supplementary_file_ids)
             already_added_pks = [file.pk for file in already_added]
             to_add = set(supplementary_file_ids) - set(already_added_pks)
             for file_id in to_add:
-                file = File.objects.get(pk=file_id)
-                review_assignment.review_round.review_files.add(file)
+                if File.objects.filter(pk=file_id).exists():
+                    file = File.objects.get(pk=file_id)
+                    review_assignment.review_round.review_files.add(file)
 
 class JournalArticleRoundAssignmentResponseSerializer(TransporterSerializer):
     """
