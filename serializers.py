@@ -26,6 +26,7 @@ from identifiers.models import Identifier
 from core import files
 from utils import setting_handler
 import re
+from uuid import uuid4
 
 OPT_STR_FIELD = {"required": False, "allow_null": True, "allow_blank": True}
 OPT_FIELD = {"required": False, "allow_null": True}
@@ -1543,6 +1544,8 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         if data.get("decision"):
             normalized_decision = data.get("decision").replace(" ", "_").lower()
             data["decision"] = self.Meta.decision_map.get(normalized_decision) or data.get("decision")
+
+        data["access_code"] = str(uuid4())
 
     def post_process(self, review_assignment: ReviewAssignment, data: dict):
         # date_requested field default is 'auto_now_add' which overwrites this date

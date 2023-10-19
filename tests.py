@@ -14,6 +14,8 @@ from django.utils import timezone
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+import re
+
 DATETIME1 = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone())
 DATETIME2 = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone())
 
@@ -127,6 +129,8 @@ class ReviewAssignmentSerializerTest(TestCase):
 
         self.assertEqual(to_datetime_str(a.date_requested), date_assigned)
         self.assertEqual(a.date_due.strftime("%Y-%m-%d"), "2023-01-01")
+        x = re.search('[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', a.access_code)
+        self.assertIsNotNone(x)
 
     def test_date_due(self):
         date_due = datetime.date(2023, 1, 1).strftime("%Y-%m-%d")
