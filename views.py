@@ -2,6 +2,8 @@ from django.http import HttpResponse, Http404
 
 from rest_framework import viewsets, parsers
 from plugins.journal_transporter.parsers import MultiPartJSONParser
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
 
 from plugins.journal_transporter import serializers
 
@@ -58,6 +60,8 @@ def manager(request):
 class TransporterViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     http_method_names = ['get', 'post']
     parser_classes = [parsers.JSONParser, MultiPartJSONParser]
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def delete(self, _request, *_args, **_kwargs):
         """Deleting resources through this plugin is not allowed."""
