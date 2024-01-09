@@ -510,7 +510,6 @@ class JournalReviewFormSerializer(TransporterSerializer):
         field_map = {
             "source_record_key": None,
             "title": "name",
-            "slug": "slug",
             "description": "intro",
             "thanks": "thanks",
             "deleted": "deleted"
@@ -518,7 +517,6 @@ class JournalReviewFormSerializer(TransporterSerializer):
         fields = tuple(field_map.keys())
 
     title = CharField(source="name")
-    slug = CharField(**OPT_STR_FIELD)
     description = CharField(source="intro", **OPT_STR_FIELD)
     thanks = CharField(**OPT_STR_FIELD)
     deleted = BooleanField(default=False)
@@ -527,11 +525,6 @@ class JournalReviewFormSerializer(TransporterSerializer):
         # Reverse "active" to disabled
         if data.get("active") and not data.get("deleted"):
             data["deleted"] = not data.get("active")
-
-    def pre_process(self, data):
-        # If slug is blank, set to parameterized name.
-        if not data.get("slug"):
-            data["slug"] = data["name"].lower().replace(" ", "-")
 
 
 class JournalReviewFormElementSerializer(TransporterSerializer):
