@@ -610,7 +610,6 @@ class JournalReviewFormElementSerializer(TransporterSerializer):
         form = ReviewForm.objects.get(pk=self.review_form_id)
         if form: form.elements.add(obj)
 
-
 class JournalRoleSerializer(TransporterSerializer):
     """
     Transporter serializer for user roles (/journals/{id}/roles/{user_id}/)
@@ -1512,9 +1511,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         except ValueError:
             pass
 
-        # Extract comments from list, if needed
-        comment = data.get("comments")
-        data["comments"] = comment[0]["comments"] if isinstance(comment, list) and len(comment) > 0 else None
+        self.comments = data.pop("comments", [])
 
     def pre_process(self, data: dict):
         is_declined = data.pop("is_declined", False)
@@ -1572,6 +1569,29 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
                 if File.objects.filter(pk=file_id).exists():
                     file = File.objects.get(pk=file_id)
                     review_assignment.review_round.review_files.add(file)
+
+        # if no form is set for this review assignment set to the default form that
+        # is automatically created for every journal.
+        default_form = ReviewForm.objects.get(journal=review_assignment.article.journal, name="Default Form")
+        form_element = default_form.elements.all()[0]
+        if not review_assignment.form:
+            review_assignment.form = default_form
+
+        # OJS has an option to add reviewer comments that aren't in a form
+        # Janeway only has a one field for "comments_for_editor"
+        # For author comments and additional editor comments add answers associated with the default form
+        for c in self.comments:
+            if not c["visible_to_author"] and (not review_assignment.comments_for_editor or len(review_assignment.comments_for_editor) == 0):
+                review_assignment.comments_for_editor = c["comments"]
+            else:
+                answer = ReviewAssignmentAnswer.objects.create(assignment=review_assignment,
+                                                               original_element=form_element,
+                                                               author_can_see=c["visible_to_author"],
+                                                               answer=c["comments"])
+                # you have to do this to make a "FrozenField" else there can be display problems
+                form_element.snapshot(answer)
+
+        review_assignment.save()
 
 class JournalArticleRoundAssignmentResponseSerializer(TransporterSerializer):
     """

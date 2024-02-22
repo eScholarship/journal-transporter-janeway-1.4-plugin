@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-import re
+import re, json
 
 DATETIME1 = datetime.datetime(2023, 1, 1, tzinfo=timezone.get_current_timezone())
 DATETIME2 = datetime.datetime(2023, 2, 2, tzinfo=timezone.get_current_timezone())
@@ -223,6 +223,15 @@ class ReviewAssignmentSerializerTest(TestCase):
 
         self.assertEquals(a.review_round.review_files.count(), 2)
 
+    def test_review_comments(self):
+        data = {"comments": [{"comments": "Author Comment 1", "visible_to_author": True},
+                             {"comments": "Author Comment 2", "visible_to_author": True},
+                             {"comments": "Editor <b>Comment</b> 1", "visible_to_author": False},
+                             {"comments": "Editor Comment 2", "visible_to_author": False}]}
+        s = self.validate_serializer(data)
+        a = s.save()
+        self.assertEqual(a.comments_for_editor, "Editor <b>Comment</b> 1")
+        self.assertEqual(a.reviewassignmentanswer_set.count(), 3)
 
 class EditorAssignmentSerializerTest(TestCase):
 
@@ -467,3 +476,4 @@ class UserSerializerTest(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn('last_name', serializer.errors)
+
