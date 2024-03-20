@@ -230,7 +230,7 @@ class ReviewAssignmentSerializerTest(TestCase):
                              {"comments": "Editor Comment 2", "visible_to_author": False}]}
         s = self.validate_serializer(data)
         a = s.save()
-        self.assertEqual(a.comments_for_editor, "Editor <b>Comment</b> 1")
+        self.assertEqual(a.comments_for_editor, "Editor \nComment\n 1")
         self.assertEqual(a.reviewassignmentanswer_set.count(), 3)
 
 class EditorAssignmentSerializerTest(TestCase):

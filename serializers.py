@@ -181,6 +181,10 @@ class TransporterSerializer(ModelSerializer):
             soup = BeautifulSoup(v, 'html.parser')
             data[k] = soup.get_text(separator="\n")
 
+    def strip_html(self, value):
+        soup = BeautifulSoup(value, 'html.parser')
+        return soup.get_text(separator="\n")
+
     def apply_defaults(self, data):
         """
         Apply default values to existing dict items with null or blank values.
@@ -1582,12 +1586,12 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
         # For author comments and additional editor comments add answers associated with the default form
         for c in self.comments:
             if not c["visible_to_author"] and (not review_assignment.comments_for_editor or len(review_assignment.comments_for_editor) == 0):
-                review_assignment.comments_for_editor = c["comments"]
+                review_assignment.comments_for_editor = self.strip_html(c["comments"])
             else:
                 answer = ReviewAssignmentAnswer.objects.create(assignment=review_assignment,
                                                                original_element=form_element,
                                                                author_can_see=c["visible_to_author"],
-                                                               answer=c["comments"])
+                                                               answer=self.strip_html(c["comments"]))
                 # you have to do this to make a "FrozenField" else there can be display problems
                 form_element.snapshot(answer)
 
