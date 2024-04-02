@@ -20,13 +20,15 @@ from review.models import (ReviewForm, ReviewFormElement, ReviewRound, ReviewAss
                            ReviewAssignmentAnswer, ReviewerRating, EditorAssignment,
                            RevisionRequest)
 from core.models import Account, AccountRole, Country, File, Galley, Interest, Role, WorkflowElement, \
-    WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES, SupplementaryFile
+    WorkflowLog, COUNTRY_CHOICES, SALUTATION_CHOICES, SupplementaryFile, Workflow
 from utils.models import LogEntry
 from identifiers.models import Identifier
 from core import files
 from utils import setting_handler
 import re
 from uuid import uuid4
+
+from cron.models import Reminder
 
 OPT_STR_FIELD = {"required": False, "allow_null": True, "allow_blank": True}
 OPT_FIELD = {"required": False, "allow_null": True}
@@ -482,7 +484,33 @@ class JournalSerializer(TransporterSerializer):
         # Create a custom fields
         self.create_custom_fields(journal)
 
+        # add default journal settings
+        journal.disable_front_end = True
+        journal.is_remote = True
+        journal.remote_view_url = f"https://escholarship.org/uc/{journal.code}"
+
         journal.save()
+
+        # add default reminders
+        Reminder.objects.create(journal=journal, type="review", run_type="before", days=7, template_name="default_review_reminder", subject="Review Invitation Reminder")
+        Reminder.objects.create(journal=journal, type="accepted-review", run_type="before", days=7, template_name="accepted_review_reminder", subject="Review Reminder")
+        Reminder.objects.create(journal=journal, type="revisions", run_type="before", days=7, template_name="revision_reminder", subject="Revision Due")
+
+        # setup default workflow
+        w = Workflow.objects.get(journal=journal)
+        w.elements.clear()
+        r = WorkflowElement.objects.get(journal=journal, element_name="review")
+        c = WorkflowElement.objects.get(journal=journal, element_name="copyediting")
+        t = WorkflowElement.objects.create(journal=journal, element_name="Typesetting Plugin", handshake_url="typesetting_articles", jump_url="typesetting_articles", stage="typesetting_plugin", article_url=True, order=2)
+
+        p = WorkflowElement.objects.get(journal=journal, element_name="prepublication")
+        p.order = 3
+        p.save()
+
+        w.elements.add(r)
+        w.elements.add(c)
+        w.elements.add(t)
+        w.elements.add(p)
 
     def create_custom_fields(self, journal: Journal) -> None:
         """
