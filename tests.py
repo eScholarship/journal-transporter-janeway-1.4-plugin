@@ -173,6 +173,7 @@ class ReviewAssignmentSerializerTest(TestCase):
         a = s.save()
 
         self.assertIsNone(a.date_accepted)
+        self.assertTrue(a.is_complete)
         self.assertEqual(to_datetime_str(a.date_declined), date_confirmed)
 
     def test_accepted(self):
@@ -199,6 +200,7 @@ class ReviewAssignmentSerializerTest(TestCase):
         data = {"cancelled": True}
         s = self.validate_serializer(data)
         a = s.save()
+        self.assertTrue(a.is_complete)
         self.assertEqual(a.decision, 'withdrawn')
 
     def test_not_cancelled(self):
@@ -211,6 +213,14 @@ class ReviewAssignmentSerializerTest(TestCase):
         s = self.validate_serializer({})
         a = s.save()
         self.assertIsNone(a.decision)
+
+    def test_rating(self):
+        editor = helpers.create_user("ed@test.edu")
+        s = self.validate_serializer({'quality': 2, 'editor_id': editor.pk})
+        a = s.save()
+        r = ReviewerRating.objects.filter(assignment=a)
+        self.assertEqual(r.count(), 1)
+        self.assertEqual(r[0].rating, 4)
 
     def test_supp_files(self):
         reviewer = helpers.create_user("reviewer@test.edu")
