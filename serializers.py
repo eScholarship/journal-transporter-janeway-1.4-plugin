@@ -1578,6 +1578,12 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
             review_assignment.date_requested = date_requested
             review_assignment.save()
 
+        # make sure that review assignments that have decisions or
+        # complete/declined dates are marked as complete
+        if review_assignment.decision or review_assignment.date_complete or review_assignment.date_declined:
+            review_assignment.is_complete = True
+            review_assignment.save()
+
         # Build review rating, which comes in as a value between 0-100
         quality = self.initial_data.get("quality")
         if quality and review_assignment.editor:
