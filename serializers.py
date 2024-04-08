@@ -1580,7 +1580,7 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
 
         # make sure that review assignments that have decisions or
         # complete/declined dates are marked as complete
-        if review_assignment.decision or review_assignment.date_complete or review_assignment.date_declined:
+        if review_assignment.decision or review_assignment.date_complete or review_assignment.date_declined or review_assignment.article.stage == 'published':
             review_assignment.is_complete = True
             review_assignment.save()
 
