@@ -1522,9 +1522,11 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
 
     quality = SerializerMethodField()
 
-    def get_quality(self, obj: ReviewAssignment):
-        rating = obj.review_rating
-        return (rating.rating * 10) if rating else None
+    # comment out for now, I don't think we're using it
+    # if it doesn't cause problems after testing just delete it.
+    #def get_quality(self, obj: ReviewAssignment):
+    #    rating = obj.review_rating
+    #    return (rating.rating * 10) if rating else None
 
     def before_validation(self, data: dict):
         # Attempt to derive date_due
@@ -1576,12 +1578,18 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
             review_assignment.date_requested = date_requested
             review_assignment.save()
 
+        # make sure that review assignments that have decisions or
+        # complete/declined dates are marked as complete
+        if review_assignment.decision or review_assignment.date_complete or review_assignment.date_declined or review_assignment.article.stage == 'published':
+            review_assignment.is_complete = True
+            review_assignment.save()
+
         # Build review rating, which comes in as a value between 0-100
         quality = self.initial_data.get("quality")
         if quality and review_assignment.editor:
             ReviewerRating.objects.create(assignment=review_assignment,
                                           rater=review_assignment.editor,
-                                          rating=(quality * 10))
+                                          rating=(quality * 2))
 
         # Attach review_file to the round, if not done already
         round_review_file_ids = self.initial_data.get("round_review_file_ids")
