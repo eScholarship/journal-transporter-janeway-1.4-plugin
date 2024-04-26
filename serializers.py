@@ -1522,11 +1522,9 @@ class JournalArticleRoundAssignmentSerializer(TransporterSerializer):
 
     quality = SerializerMethodField()
 
-    # comment out for now, I don't think we're using it
-    # if it doesn't cause problems after testing just delete it.
-    #def get_quality(self, obj: ReviewAssignment):
-    #    rating = obj.review_rating
-    #    return (rating.rating * 10) if rating else None
+    def get_quality(self, obj: ReviewAssignment):
+        rating = obj.review_rating
+        return rating.rating if rating else None
 
     def before_validation(self, data: dict):
         # Attempt to derive date_due
