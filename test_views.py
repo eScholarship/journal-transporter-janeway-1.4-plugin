@@ -2,6 +2,10 @@ from django.test import TestCase
 from django.core.management import call_command
 from utils.testing import helpers
 import json
+from django.conf import settings
+
+# these imports are needed to make sure plugin urls are loaded
+from core import models as core_models, urls
 
 class TestViews(TestCase):
     def setUp(self):
@@ -13,8 +17,6 @@ class TestViews(TestCase):
         self.user.is_staff = True
         self.user.save()
         self.journal1, self.journal2 = helpers.create_journals()
-        # we have to call install for the views to be available
-        call_command('install_plugins', 'journal_transporter')
 
     def test_no_authentication(self):
         response = self.client.get('/plugins/journal-transporter-plugin-for-janeway-14/journals/')
