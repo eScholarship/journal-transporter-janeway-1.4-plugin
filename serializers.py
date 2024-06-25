@@ -501,7 +501,7 @@ class JournalSerializer(TransporterSerializer):
         w.elements.clear()
         r = WorkflowElement.objects.get(journal=journal, element_name="review")
         c = WorkflowElement.objects.get(journal=journal, element_name="copyediting")
-        t = WorkflowElement.objects.create(journal=journal, element_name="Typesetting Plugin", handshake_url="typesetting_articles", jump_url="typesetting_articles", stage="typesetting_plugin", article_url=True, order=2)
+        t = WorkflowElement.objects.create(journal=journal, element_name="Typesetting Plugin", handshake_url="typesetting_articles", jump_url="typesetting_article", stage="typesetting_plugin", article_url=True, order=2)
 
         p = WorkflowElement.objects.get(journal=journal, element_name="prepublication")
         p.order = 3
