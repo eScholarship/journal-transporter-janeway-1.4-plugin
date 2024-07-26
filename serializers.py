@@ -721,6 +721,8 @@ class JournalIssueSerializer(TransporterSerializer):
             "title",
             "volume",
             "number",
+            "year",
+            "show_year",
             "date_published",
             "description",
             "sequence",
@@ -741,6 +743,8 @@ class JournalIssueSerializer(TransporterSerializer):
     title = CharField(source="issue_title", **OPT_STR_FIELD)
     volume = IntegerField(default=1, **OPT_FIELD)
     number = CharField(source="issue", default="1", **OPT_STR_FIELD)
+    year = IntegerField(**OPT_FIELD)
+    show_year = BooleanField(default=False, **OPT_FIELD)
     date_published = DateTimeField(source="date", **OPT_FIELD)
     description = CharField(source="issue_description", **OPT_STR_FIELD)
     sequence = IntegerField(source="order", **OPT_FIELD)
@@ -758,6 +762,10 @@ class JournalIssueSerializer(TransporterSerializer):
 
         # Add to end of issue order, by default
         self.apply_default_value(data, "order", len(self.journal.issues))
+        show_year = data.pop('show_year', False)
+        year = data.pop('year', "0")
+        if show_year:
+            data['date'] = datetime(year, 1, 1, 12, 0, 0, tzinfo=timezone.get_current_timezone())
 
     def post_process(self, issue: Issue, data: dict) -> None:
         if data.get("cover_file_file"):
