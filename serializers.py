@@ -763,7 +763,7 @@ class JournalIssueSerializer(TransporterSerializer):
         # Add to end of issue order, by default
         self.apply_default_value(data, "order", len(self.journal.issues))
         show_year = data.pop('show_year', False)
-        default_year = data["date"].year if data.get("date", None) else datetime.now().year
+        default_year = data["date"].year if data.get("date", None) else (datetime.now().year + 50)
         year = data.pop('year', default_year)
         if show_year:
             data['date'] = datetime(year if year else default_year, 1, 1, 12, 0, 0, tzinfo=timezone.get_current_timezone())
