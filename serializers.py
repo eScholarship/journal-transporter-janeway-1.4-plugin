@@ -763,9 +763,10 @@ class JournalIssueSerializer(TransporterSerializer):
         # Add to end of issue order, by default
         self.apply_default_value(data, "order", len(self.journal.issues))
         show_year = data.pop('show_year', False)
-        year = data.pop('year', "0")
+        default_year = data["date"].year if data.get("date", None) else datetime.now().year
+        year = data.pop('year', default_year)
         if show_year:
-            data['date'] = datetime(year, 1, 1, 12, 0, 0, tzinfo=timezone.get_current_timezone())
+            data['date'] = datetime(year if year else default_year, 1, 1, 12, 0, 0, tzinfo=timezone.get_current_timezone())
 
     def post_process(self, issue: Issue, data: dict) -> None:
         if data.get("cover_file_file"):
