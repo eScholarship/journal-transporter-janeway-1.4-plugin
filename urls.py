@@ -1,4 +1,5 @@
-from django.conf.urls import url, include
+from django.conf.urls import include
+from django.urls import re_path
 
 from rest_framework.routers import DefaultRouter
 
@@ -179,6 +180,6 @@ user_routes = router.register(r'users', views.UserViewSet)
 
 # Apply routers to URL patterns
 urlpatterns = [
-    url(r'^', include(router.urls)),
-    url(r'^manager', views.manager, name="transporter_manager")
+    re_path(r'^', include(router.urls)),
+    re_path(r'^manager', views.manager, name="transporter_manager")
 ]
