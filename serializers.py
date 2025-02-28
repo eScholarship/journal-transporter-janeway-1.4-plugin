@@ -99,7 +99,7 @@ class TransporterSerializer(ModelSerializer):
         self.before_validation(self.initial_data)
         self.strip_html_content(self.initial_data)
         self.apply_defaults(self.initial_data)
-        return super().is_valid(raise_exception)
+        return super().is_valid(raise_exception=raise_exception)
 
     def create(self, validated_data: dict, upsert: bool = False) -> Model:
         """
