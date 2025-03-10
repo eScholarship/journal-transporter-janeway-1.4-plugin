@@ -352,7 +352,9 @@ class UserSerializer(TransporterSerializer):
         }
         fields = tuple(field_map.keys())
         defaults = {
-            "affiliation": "None"
+            "affiliation": "None",
+            "salutation": "",
+            "middle_name": ""
         }
         
 
@@ -1157,7 +1159,8 @@ class JournalArticleAuthorSerializer(UserSerializer):
             "user_id": "author_id"
         }
         defaults = {
-            "department": "None"
+            "department": "None",
+            "salutation": ""
         }
         foreign_keys = {
             "user": "user_id"
