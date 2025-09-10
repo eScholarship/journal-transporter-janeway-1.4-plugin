@@ -1439,6 +1439,10 @@ class JournalArticleRoundSerializer(TransporterSerializer):
     round = IntegerField(source="round_number")
     date = DateTimeField(source="date_started", **OPT_FIELD)
 
+    def create(self, data: dict) -> ReviewRound:
+        # If ReviewRound already exists, we can't create a new one, so just return the existing
+        return super().create(data, upsert=True)
+
     def post_process(self, review_round: ReviewRound, data: dict):
         if review_round.round_number == 1:
             if review_round.article.stage in submission_models.NEW_ARTICLE_STAGES:
