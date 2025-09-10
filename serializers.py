@@ -1159,7 +1159,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
             "user_id": "author_id"
         }
         defaults = {
-            "department": "None",
+            "department": "",
             "salutation": ""
         }
         foreign_keys = {
@@ -1172,7 +1172,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
     last_name = CharField(**OPT_STR_FIELD)
     middle_name = CharField(**OPT_STR_FIELD)
     sequence = IntegerField(source="order", **OPT_FIELD)
-    affiliation = CharField(source="institution", default="None", max_length=1000, **OPT_STR_FIELD)
+    affiliation = CharField(source="institution", default="", max_length=1000, **OPT_STR_FIELD)
     department = CharField(**OPT_STR_FIELD)
     salutation = CharField(source="name_prefix", **OPT_STR_FIELD)
     country_code = SlugRelatedField(source="country", slug_field="code", queryset=Country.objects.all(), **OPT_FIELD)
