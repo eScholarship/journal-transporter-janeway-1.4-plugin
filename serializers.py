@@ -352,7 +352,7 @@ class UserSerializer(TransporterSerializer):
         }
         fields = tuple(field_map.keys())
         defaults = {
-            "affiliation": "None",
+            "affiliation": "",
             "salutation": "",
             "middle_name": ""
         }
@@ -362,7 +362,7 @@ class UserSerializer(TransporterSerializer):
     first_name = CharField()
     last_name = CharField()
     middle_name = CharField(**OPT_STR_FIELD)
-    affiliation = CharField(source="institution", default="None", max_length=1000, **OPT_STR_FIELD)
+    affiliation = CharField(source="institution", default="", max_length=1000, **OPT_STR_FIELD)
     department = CharField(**OPT_STR_FIELD)
     salutation = CharField(**OPT_STR_FIELD)
     country_code = SlugRelatedField(source="country", slug_field="code", queryset=Country.objects.all(), **OPT_FIELD)
@@ -1159,6 +1159,7 @@ class JournalArticleAuthorSerializer(UserSerializer):
             "user_id": "author_id"
         }
         defaults = {
+            "affiliation": "",
             "department": "",
             "salutation": ""
         }
